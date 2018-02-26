@@ -31,6 +31,11 @@
 #define LEFT_ENCODER  (PINC & 0b00000001) //On PC0
 #define RIGHT_ENCODER (PINC & 0b00000010) //On PC1
 
+#define NORTH 0
+#define EAST 1
+#define SOUTH 2
+#define WEST 3
+
 //int8_t I2CFail;
 
 //Functions prototype
@@ -51,3 +56,14 @@ void IRUpdate(uint8_t *IR);
 void tone(unsigned int frequencey /*= 3000*/);
 double lowBatt();
 void delayS(unsigned int S);
+void backAlign();
+
+void north(int heading);
+void east(int heading);
+void south(int heading);
+void west(int heading);
+
+void straight();
+void leftTurn();
+void rightTurn();
+void turn180();

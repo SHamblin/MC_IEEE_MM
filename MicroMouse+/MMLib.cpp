@@ -445,3 +445,9 @@ void delayS(unsigned int S)//Wait time in seconds
 		S--;
 	}
 }
+
+void backAlign(){//Back Align for walls
+	motorSpeed(-25,-20);
+	delayS(2);
+	motorSpeed(0,0);
+}
