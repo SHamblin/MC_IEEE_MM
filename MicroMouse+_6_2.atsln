@@ -1,0 +1,20 @@
+
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Atmel Studio Solution File, Format Version 11.00
+Project("{E66E83B9-2572-4076-B26E-6BE79FF3018A}") = "MicroMouse+", "MicroMouse+\MicroMouse+_6_2.cppproj", "{ED876397-11D6-45CD-98F2-D76E5A95E348}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AVR = Debug|AVR
+		Release|AVR = Release|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ED876397-11D6-45CD-98F2-D76E5A95E348}.Debug|AVR.ActiveCfg = Debug|AVR
+		{ED876397-11D6-45CD-98F2-D76E5A95E348}.Debug|AVR.Build.0 = Debug|AVR
+		{ED876397-11D6-45CD-98F2-D76E5A95E348}.Release|AVR.ActiveCfg = Release|AVR
+		{ED876397-11D6-45CD-98F2-D76E5A95E348}.Release|AVR.Build.0 = Release|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
