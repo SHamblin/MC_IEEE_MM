@@ -18,10 +18,10 @@ int main()
 	_delay_ms(250);
 	motorSpeedLeft(0);
 	//motorSpeedRight(25);
-	delayS(1);
+	//delayS(1);
 	//motorTicksPerSecond(4,4);
-	backAlign();
-	delayS(5);
+	//backAlign();
+	//delayS(5);
 	
 	//motorTicks(5000,25);
 	
@@ -33,10 +33,10 @@ int main()
 	//_delay_ms(5);
 	
 
-	
-	I2CStart(I2C_MULTIPLEXER_WRITE);
-	I2CDataSend(0b00000100);
-	I2CStop();
+	IRsensorSelect(IR_LEFT);
+	//I2CStart(I2C_MULTIPLEXER_WRITE);
+	//I2CDataSend(0b00010000);
+	//I2CStop();
 	
 	//_delay_ms(1);
 	_delay_us(500);
@@ -129,6 +129,12 @@ int main()
 		
 		_delay_us(10);
 		
+		//I2CStart(0xAA);
+		//I2CDataSend(0xAA);
+		//I2CStop();
+		
+		_delay_us(10);
+			
 		I2CStart(IR_WRITE);
 		I2CDataSend(0x80);
 		I2CDataSend(0x08);
@@ -140,6 +146,7 @@ int main()
 			I2CStop();
 			
 			_delay_us(20);
+			
 			
 			I2CStart(IR_READ);
 			command = I2CDataRead(false);
