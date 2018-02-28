@@ -7,6 +7,7 @@ int8_t I2CStatus = 0,I2CWait = 0;
 
 uint8_t I2CStart(uint8_t address)
 {
+	//PORTC = 0b00110000;//This sets the state of the ports. This makes sure it's ready to work
 	TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);
 	while(!(TWCR & (1<<TWINT)));
 	TWDR = address;
@@ -46,17 +47,31 @@ void I2CStop()
 	//(TWCR = (1<<TWINT)|(1<<TWSTO)|(1<<TWEN)|(1<<TWIE))
 }
 
+void I2CPurge(uint8_t cycles){//This purge command toggles the clock line 9 times for each cycle. This will clear junk left in the i2c buffer of i2c devices
+	_delay_us(15);//This is simply a gap to make sure there is enough space between this and real I2C commands. This gap is for 400 Khz I2C
+	TWCR = 0;//Zero TWCR register to so that if I2C was set up it can now be driven manualy
+	DDRC |= 0b00100000;
+	
+	for(int i = 0; i< (9 * cycles); i++){
+		PORTC |= 0b00100000;
+		_delay_us(7);//This timeing works great for 400 KHz I2C
+		PORTC &= 0b11011111;
+		_delay_us(7);
+	}
+	PORTC = 0b00110000;//Re configure PORTC for I2C ussage just in case
+	_delay_us(15);
+}
+
 void IRsensorSelect(uint8_t number)//Function to select the sensor on the I2C bus using the multiplexer
 {
 	I2CStart(I2C_MULTIPLEXER_WRITE);
-	//I2CDataSend(0xFF);
 	switch(number)
 	{
-		case 0: I2CDataSend(IR_LEFT); break;
-		case 1: I2CDataSend(IR_FRONT_LEFT); break;
-		case 2: I2CDataSend(IR_FRONT); break;
-		case 3: I2CDataSend(IR_FRONT_RIGHT); break;
-		case 4: I2CDataSend(IR_RIGHT); break;
+		case IR_LEFT:		 I2CDataSend(IR_LEFT); break;
+		//case IR_FRONT_LEFT:  I2CDataSend(IR_FRONT_LEFT); break;
+		case IR_FRONT:		 I2CDataSend(IR_FRONT); break;
+		case IR_FRONT_RIGHT: I2CDataSend(IR_FRONT_RIGHT); break;
+		case IR_RIGHT:		 I2CDataSend(IR_RIGHT); break;
 		default: break;
 	}
 	I2CStop();
@@ -67,51 +82,61 @@ void IRsensorSelect(uint8_t number)//Function to select the sensor on the I2C bu
 
 void initalSetUp()
 {
-	//int8_t loopCount=0;
-	_delay_ms(25);//Gives time for sensors to initialize
-	DDRC =  0b00000000; //Sets PORTC data direction
-	PORTC = 0b00001100; // activates internal pull-up 
+	_delay_ms(10);//Gives time for every thing to stabalise, might not be needed
+	DDRC &=  0b11110000;//Makes sure that the buttons and encoders are inputs
+	PORTC = 0;//Makes sure all other parts of PORTC are initalised
+	PORTC |= 0b00001111;//Enables pull up for the two buttons and helps assist the pull ups on the encoders
+	
 	//TWPS0=0; TWPS1=0;
 	
 	//ADC6 config code
-	ADMUX  = 0b01100110;//Some setings and slects ADC
+	//ADMUX  = 0b01100110;//Some setings and slects ADC
 	
-	ADCSRB = 0b00000000;
+	//ADCSRB = 0b00000000;
 	
-	ADCSRA = 0b11000110;//Enables ADC and sets prescaler value
+	//ADCSRA = 0b11000110;//Enables ADC and sets prescaler value
 	
-	////Set up registers for I2C
-	//I2C_MODE_FAST; //Set I2C mode
-	//for(int8_t loopCount=0;loopCount!=5; loopCount++)//Preforms initial config of IR sensors
-	//{
-		//IRsensorSelect(loopCount);
-		////Step 1 Write to 82h(Proximity rate register)
-		//I2CStart(IR_WRITE);
-		//I2CDataSend(0x82);
-		//I2CDataSend(0b101);//Sets it to 62.5 measurements/s
-		//I2CStop();
-		////Step 2 Write to 83h(LED current settings)
-		//I2CStart(IR_WRITE);
-		//I2CDataSend(0x83);
-		//I2CDataSend(20);//Sets LED current to 200 mA at 20d
-		//I2CStop();
-		////Sets sensors 1 & 3 to different frequency's so not to interfere with 0,2,4
-		///*if((loopCount=1)||(loopCount=3))
-		//{
-			//I2CStart(IR_WRITE);
-			//I2CDataSend(0x8F);
-			//I2CDataSend(0b00001001);//Sets it to 781.25 kHz
-			//I2CStop();
-		//}*/
-		////Sets up periodic measurements
-		//I2CStart(IR_WRITE);
-		//I2CDataSend(0x80);
-		//I2CDataSend(0b00000011);//Enables auto measure
-		//I2CStop();
-		////loopCount++;
-		//_delay_ms(1);
-	//}
-	//sei();//Enables interrupts
+	
+}
+
+void setupIR(){//This function configures the IR sensors. It sets up all 3 connected sensors.
+	
+	I2CPurge(1);//This is to purge the sliter just in case
+	
+	for(int i = 0; i < 3; i++){
+		switch(i)//This switch selects which sensor to set up
+		{
+			case 0: IRsensorSelect(IR_RIGHT);
+					break;
+			case 1: IRsensorSelect(IR_FRONT);
+					break;			
+			case 2: IRsensorSelect(IR_LEFT);
+					break;
+		}
+		
+		I2CPurge(2);
+	
+		I2CStart(IR_WRITE);//This sets the rate for automatic measurements
+		I2CDataSend(0x82);
+		I2CDataSend(0b00000101);//Sets it to 62.5 measurements/s
+		I2CStop();	
+	
+		_delay_us(10);
+	
+		I2CStart(IR_WRITE);//This command sets the LED current from 0mA - 200mA
+		I2CDataSend(0x83);
+		I2CDataSend(20);//Sets LED current to 200 mA
+		I2CStop();	
+	
+		_delay_us(10);
+	
+		I2CStart(IR_WRITE);//This sets the command register to enable automatic measurement. This should be the last setup command
+		I2CDataSend(0x80);
+		I2CDataSend(0b00000011);
+		I2CStop();
+	
+		_delay_us(10);
+	}
 }
 
 void motorSpeedLeft(int8_t speed)
@@ -384,6 +409,33 @@ void IRUpdate(uint8_t *IR)
 		I2CStop();
 		loopCount++;
 	}
+}
+
+unsigned int readIR(uint8_t sensor){
+	unsigned int result = 0;
+	uint8_t resultMSB = 0;
+	uint8_t resultLSB = 0;
+	
+	IRsensorSelect(sensor);
+	
+	I2CStart(IR_WRITE);//This selects the register to read from. In this case it's the most significant byte of the result
+	I2CDataSend(0x87);
+	I2CStop();
+		
+	_delay_us(10);
+		
+	I2CStart(IR_READ);
+	resultMSB = I2CDataRead(true);//MSB
+	resultLSB = I2CDataRead(false);//LSB
+	I2CStop();	
+	
+	_delay_us(10);
+	
+	result = resultMSB;
+	result = result << 8;//Shifts data from MSB to the right
+	result += resultLSB;
+	
+	return result;
 }
 
 void tone(unsigned int frequencey = 3000)

@@ -15,11 +15,11 @@
 #define IR_READ  0x27  
 #define I2C_MODE_NORMAL TWBR=32;
 #define I2C_MODE_FAST   TWBR=2;
-#define IR_LEFT        0b00010000
-#define IR_FRONT_LEFT  0b00001000
+#define IR_LEFT        0b00000001
+#define IR_FRONT_LEFT  0b00000010//These are both old and un used after we decided we did not need diagnal sensors
 #define IR_FRONT       0b00000100
-#define IR_FRONT_RIGHT 0b00000010
-#define IR_RIGHT       0b00000001
+#define IR_FRONT_RIGHT 0b00001000
+#define IR_RIGHT       0b00010000
 #define WHEEL_BASE 45 //Wheel base in MM
 #define MOVE_DIS 18 //Distance to move 1 square
 #define LEFT_MAX_SPEED 10//Trying to conpensate for differing motor speeds
@@ -43,8 +43,10 @@ uint8_t I2CStart(uint8_t address);
 uint8_t I2CDataSend(uint8_t address);
 uint8_t I2CDataRead(bool more);
 void I2CStop();
+void I2CPurge(uint8_t cycles);
 void IRsensorSelect(uint8_t number);
 void initalSetUp();
+void setupIR();
 void motorSpeedLeft(int8_t speed);
 void motorSpeedRight(int8_t speed);
 void motorSpeed(int8_t speedL, int8_t speedR);
@@ -53,6 +55,7 @@ void motorTicks(int leftTick,int8_t speed);
 void motorTicksPerSecond(int leftTicksSec, int rightTicksSec);
 void delay_mS(unsigned int mS);
 void IRUpdate(uint8_t *IR);
+unsigned int readIR(uint8_t sensor);
 void tone(unsigned int frequencey /*= 3000*/);
 double lowBatt();
 void delayS(unsigned int S);
