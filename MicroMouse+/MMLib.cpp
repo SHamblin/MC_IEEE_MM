@@ -260,111 +260,6 @@ void motorTicks(int tickMax,int8_t speed)//Moves wheels for specified ticks
 	motorBrake(true, true);
 }
 
-void motorTicksPerSecond(int leftTicksSec, int rightTicksSec){
-	float PTune = 0.3;//This should be negative// P -0.5  I -0.001
-	float ITune = 0.15;// -0.0001;  0.5
-	float PCompL = 0;
-	float PCompR = 0;
-	float ICompL = 0;
-	float ICompR = 0 ;
-	float MeasuredTicksL = 0;
-	float MeasuredTicksR = 0;
-	int loopTime = 5;
-	int totalTimeMs = 0;
-	int lastTickMeasuredL = 0;
-	int lastTickMeasuredR = 0;
-	int measuredSpeedL = 0;
-	int measuredSpeedR = 0;
-	int motorSpeedL;
-	int motorSpeedR;
-	
-	float biasL = 25;//Free running this is ~ 5.5 ticks
-	float biasR = 25;
-	
-	int mSPerTickL = 1000/leftTicksSec;
-	int mSPerTickR = 1000/rightTicksSec;
-	
-	int8_t leftStatus = LEFT_ENCODER;
-	int8_t rightStatus = RIGHT_ENCODER;
-
-	motorSpeedLeft(biasL);
-	motorSpeedRight(biasR);
-	delay_mS(loopTime);
-	totalTimeMs += loopTime;
-	
-	while(true){
-		
-		//Left PID Loop
-		if(leftStatus != LEFT_ENCODER || (totalTimeMs - lastTickMeasuredL) > mSPerTickL){
-			if(leftStatus != LEFT_ENCODER){
-				MeasuredTicksL++;
-			}
-			
-			//measuredSpeedL = (measuredSpeedL + ((totalTimeMs - lastTickMeasuredL)))/2;//This computes the speed. It's averaged over two results.
-			measuredSpeedL = totalTimeMs - lastTickMeasuredL;
-			
-			PCompL = ((mSPerTickL - measuredSpeedL)) * PTune;
-			
-			ICompL = ((totalTimeMs/mSPerTickL) - MeasuredTicksL) * ITune;
-			
-			//motorSpeedL = PCompL + ICompL;
-			motorSpeedL = PCompL + ICompL + biasL;
-			
-			if(biasL >= 100)biasL = 99;
-			
-			if(motorSpeedL <= 15)motorSpeedL = 16;
-			
-			//motorSpeedL = biasL;//Reviersices the motor as a fix for negative P
-			
-			motorSpeedLeft(motorSpeedL);
-			
-			
-			
-			if(leftStatus != LEFT_ENCODER){
-				lastTickMeasuredL = totalTimeMs;
-				leftStatus = LEFT_ENCODER;
-			}
-		}
-		
-		//else if((totalTimeMs - lastTickMeasuredL) > mSPerTickL){//Same loop but no update		}
-		
-		//Right PID Loop
-		if(rightStatus != RIGHT_ENCODER || (totalTimeMs - lastTickMeasuredR) > mSPerTickR){
-			if(rightStatus != RIGHT_ENCODER){
-				MeasuredTicksR++;
-			}
-			
-			//measuredSpeedR = (measuredSpeedR + ((totalTimeMs - lastTickMeasuredR)))/2;//This computes the speed. It's averaged over two results.
-			measuredSpeedR = totalTimeMs - lastTickMeasuredR;
-			
-			PCompR = (mSPerTickR - measuredSpeedR) * PTune;
-			
-			ICompR = ((totalTimeMs/mSPerTickR) - MeasuredTicksR) * ITune;
-			
-			//motorSpeedR = PCompR + ICompR;
-			motorSpeedR = PCompR + ICompR + biasR;
-			
-			if(biasR >= 100)biasR = 99;
-			
-			if(measuredSpeedR <= 15)measuredSpeedR = 16;
-			
-						
-			//motorSpeedR = biasR;//Reviersices the motor as a fix for negative P
-			
-			motorSpeedRight(motorSpeedR);			
-			
-			if(rightStatus != RIGHT_ENCODER){
-				lastTickMeasuredR = totalTimeMs;
-				rightStatus = RIGHT_ENCODER;
-			}
-		}
-		
-		delay_mS(loopTime);
-		totalTimeMs += loopTime;
-	}
-	
-	
-}
 
 void delay_mS(unsigned int mS)//Wait time in miliseconds
 {
@@ -502,4 +397,409 @@ void backAlign(){//Back Align for walls
 	motorSpeed(-25,-20);
 	delayS(2);
 	motorSpeed(0,0);
+}
+
+void moveMediumSpeed(unsigned int distanceMM){
+	
+}
+
+void motorTicksPerSecond(int leftTicksSec, int rightTicksSec){
+	const float PTune = 0.5;//This should be negative// P -0.5  I -0.001
+	const float ITune = 0;//0.15;// -0.0001;  0.5
+	float PCompL = 0;
+	float PCompR = 0;
+	float ICompL = 0;
+	float ICompR = 0 ;
+	float MeasuredTicksL = 0;
+	float MeasuredTicksR = 0;
+	int loopTime = 5;
+	int totalTimeMs = 0;
+	int lastTickMeasuredL = 0;
+	int lastTickMeasuredR = 0;
+	int measuredSpeedL = 0;
+	int measuredSpeedR = 0;
+	int motorSpeedL;
+	int motorSpeedR;
+	
+	float biasL = 25;//Free running this is ~ 5.5 ticks
+	float biasR = 25;
+	
+	int mSPerTickL = 1000/leftTicksSec;
+	int mSPerTickR = 1000/rightTicksSec;
+	
+	int8_t leftStatus = LEFT_ENCODER;
+	int8_t rightStatus = RIGHT_ENCODER;
+
+	motorSpeedLeft(biasL);
+	motorSpeedRight(biasR);
+	delay_mS(loopTime+1000);
+	totalTimeMs += loopTime;
+	
+	while(true){
+		//totalTimeMs += loopTime;
+		//Left PID Loop
+		if(leftStatus != LEFT_ENCODER || (totalTimeMs - lastTickMeasuredL) > mSPerTickL){
+			if(leftStatus != LEFT_ENCODER){
+				MeasuredTicksL++;
+			}
+			
+			//measuredSpeedL = (measuredSpeedL + ((totalTimeMs - lastTickMeasuredL)))/2;//This computes the speed. It's averaged over two results.
+			measuredSpeedL = totalTimeMs - lastTickMeasuredL;
+			
+			PCompL = ((mSPerTickL - measuredSpeedL)) * PTune;
+			//PCompL = ((measuredSpeedL - mSPerTickL)) * PTune;
+			
+			ICompL = ((totalTimeMs/mSPerTickL) - MeasuredTicksL) * ITune;
+			
+			//motorSpeedL = PCompL + ICompL;
+			motorSpeedL = PCompL + ICompL;//biasL + 3;
+			
+			if(biasL >= 100)biasL = 99;
+			
+			if(motorSpeedL <= 15)motorSpeedL = 16;
+			
+			//motorSpeedL = biasL;//Reviersices the motor as a fix for negative P
+			
+			motorSpeedLeft(motorSpeedL);
+			
+			
+			
+			if(leftStatus != LEFT_ENCODER){
+				lastTickMeasuredL = totalTimeMs;
+				leftStatus = LEFT_ENCODER;
+			}
+		}
+		
+		//else if((totalTimeMs - lastTickMeasuredL) > mSPerTickL){//Same loop but no update		}
+		
+		//Right PID Loop
+		if(rightStatus != RIGHT_ENCODER || (totalTimeMs - lastTickMeasuredR) > mSPerTickR){
+			if(rightStatus != RIGHT_ENCODER){
+				MeasuredTicksR++;
+			}
+			
+			//measuredSpeedR = (measuredSpeedR + ((totalTimeMs - lastTickMeasuredR)))/2;//This computes the speed. It's averaged over two results.
+			measuredSpeedR = totalTimeMs - lastTickMeasuredR;
+			
+			PCompR = ((mSPerTickR - measuredSpeedR)) * PTune;
+			//PCompR = ((measuredSpeedR - mSPerTickR)) * PTune;
+			
+			ICompR = ((totalTimeMs/mSPerTickR) - MeasuredTicksR) * ITune;
+			
+			//motorSpeedR = PCompR + ICompR;
+			motorSpeedR = PCompR + ICompR + 6;// + 20;// + biasR;
+			
+			if(biasR >= 100)biasR = 99;
+			
+			if(motorSpeedR <= 15)motorSpeedR = 16;
+			
+			
+			//motorSpeedR = biasR;//Reviersices the motor as a fix for negative P
+			
+			motorSpeedRight(motorSpeedR);
+			
+			if(rightStatus != RIGHT_ENCODER){
+				lastTickMeasuredR = totalTimeMs;
+				rightStatus = RIGHT_ENCODER;
+			}
+		}
+		
+		delay_mS(loopTime);
+		totalTimeMs += loopTime;
+	}
+	
+	
+}
+
+//This PID code is based on Atmel's app note on PID. To find the app note google AN_2558. http://www.microchip.com/wwwappnotes/appnotes.aspx?appnote=en591227
+void moveStraight(int16_t distance_CM, int16_t CM_Second_SetPoint){//This is a PID algorithm for smooth and acurate motion control
+	distance_CM *= 100;//Converts 2.26 CM to 226
+	CM_Second_SetPoint *=100;
+	//Wheel diameter was measured as 5.77 CM
+	//#define WHEEL_CIRCUMFRENCE 18.1//Measure ticks per rotation
+	//For the current hall effect sensors I count 4 high sections or 8 edges per-rotation
+	//Distance per tick = 18.1/8 = 2.26 CM
+	int16_t msPerTick = ((int16_t)226*100)/(CM_Second_SetPoint/10);//This is simplifyed to avoid floats. In proper form it's 1000mS/(CM_Second_SetPoint/CM_Per_Tick)
+	const int16_t PTune = 2;
+	//const float ITune = 0;
+	const int32_t distanceTick = 226;//2.26 CM  Casting only uses the LSB's meaning that a 32Bit int needs to be less than the max for a 16bit int, this is 32bit to temp convert a value to a big enough range
+	int16_t CM_Second_Left = 0, CM_Second_Right = 0;
+	struct PID_STRUCT pidStructL;
+	struct PID_STRUCT pidStructR;
+	
+	//int16_t CM_Second_Measured;
+	//int16_t error;
+	int16_t totalTimeMs = 0;
+	int16_t lastMeasurementLeft = 0, lastMeasurementRight = 0;
+	const int16_t loopTime = 5;
+	uint8_t leftStatus = LEFT_ENCODER;
+	uint8_t rightStatus = RIGHT_ENCODER;
+	int16_t leftPIDResult, rightPIDResult;
+	bool leftReverse = false, rightReverse = false;
+	uint8_t leftMotorSpeed, rightMotorSpeed;
+	//error = CM_Second_SetPoint - CM_Second_Measured;// Error = set point - process value
+	#define blank 0
+	bool leftDone = false, rightDone = false;
+	
+	pidStructInit(PTune, &pidStructL);
+	pidStructInit(PTune, &pidStructR);
+	
+	motorSpeed(29,25);//This is to get it started
+	_delay_ms(250);
+	
+	while(!leftDone || !rightDone){
+		if(!leftDone && leftStatus != LEFT_ENCODER){
+			//CM_Second_Left = ((totalTimeMs - lastMeasurementLeft)/1000) * distanceTick;
+			//CM_Second_Left = (int16_t)(((totalTimeMs - lastMeasurementLeft) * ((int32_t)distanceTick))/1000);//45.2 -> 0.45 CM/S
+			CM_Second_Left = ((int16_t)(((totalTimeMs - lastMeasurementLeft) * distanceTick)/1000) + CM_Second_Left)/2;//45.2 -> 0.45 CM/S
+			
+			leftPIDResult = pidCalculation(CM_Second_SetPoint , CM_Second_Left, &pidStructL); 
+			
+			if(leftPIDResult < 0){
+				//leftReverse = true;
+				leftPIDResult = 10 << 8;
+			}else{
+				leftReverse = false;
+			}
+			
+			//leftMotorSpeed = (leftPIDResult >> 7) * 0xFF;
+			
+			motorSpeedLeft(leftMotorSpeed + blank + 3, leftReverse);
+			
+			lastMeasurementLeft = totalTimeMs;
+			leftStatus = LEFT_ENCODER;
+		}
+		msPerTick = 300;
+		if(rightStatus != RIGHT_ENCODER || (lastMeasurementRight + msPerTick) < totalTimeMs){
+		//if(rightStatus != RIGHT_ENCODER){	
+			if(rightStatus != RIGHT_ENCODER){
+				//CM_Second_Right = ((totalTimeMs - lastMeasurementRight)/1000.0) * distanceTick;//One floating point part, almost eliminated it!
+				CM_Second_Right = (1000.0/(totalTimeMs - lastMeasurementRight)) * distanceTick;//One floating point part, almost eliminated it!	
+			}else{
+				//CM_Second_Right = (((totalTimeMs + msPerTick)- lastMeasurementRight)/1000.0) * distanceTick;
+				CM_Second_Right = (1000.0/(totalTimeMs - lastMeasurementRight)) * distanceTick;
+			}
+			//CM_Second_Right = ((int16_t)(((totalTimeMs - lastMeasurementRight) * distanceTick)/1000) + CM_Second_Right)/2;//45.2 -> 0.45 CM/S   Also casting only uses the LSB's meaning that a 32Bit int needs to be less than the max for a 16bit int
+			//CM_Second_SetPoint = 1000;
+			uint16_t CM_Second_SetPoint2 = 1000;
+			uint8_t left = 0x03, right = 0xE8;
+			
+			I2CStart(0x02);
+			I2CDataSend(totalTimeMs >> 8);
+			I2CDataSend(totalTimeMs & 0xFF);
+			I2CDataSend(lastMeasurementRight >> 8);
+			I2CDataSend(lastMeasurementRight & 0xFF);			
+			
+			I2CDataSend(CM_Second_Right >> 8);
+			I2CDataSend(CM_Second_Right & 0xFF);
+			//I2CDataSend(CM_Second_SetPoint >> 8);
+			//I2CDataSend(CM_Second_SetPoint & 0xFF);
+			//I2CDataSend(left);
+			//I2CDataSend(right);
+			I2CStop();
+			
+			rightPIDResult = pidCalculation(CM_Second_SetPoint , CM_Second_Right, &pidStructR); 
+			
+			if(rightPIDResult < 0){
+				//rightReverse = true;
+				rightPIDResult = 10 << 8;
+				}else{
+				rightReverse = false;
+			}
+			
+			rightMotorSpeed = (rightPIDResult >> 7) & 0xFF;
+			
+			motorSpeedRight(rightMotorSpeed + blank, rightReverse);
+			
+			I2CStart(0x02);
+			I2CDataSend(rightPIDResult >> 8);
+			I2CDataSend(rightPIDResult & 0xFF);
+			I2CDataSend(rightMotorSpeed);
+			I2CStop();
+			
+			//motorSpeedRight(pidCalculation(CM_Second_SetPoint , CM_Second_Right, pidStructR), false);
+			
+			if(rightStatus != RIGHT_ENCODER){
+				lastMeasurementRight = totalTimeMs;
+				rightStatus = RIGHT_ENCODER;
+			}
+		}
+		_delay_ms(loopTime);
+		totalTimeMs += loopTime;
+	}
+}
+
+void pidStructInit(const int16_t PTune, struct PID_STRUCT *pidStruct){
+	pidStruct->P_Factor = PTune; 
+	pidStruct->maxError = INT16_MAX / (pidStruct->P_Factor + 1);
+}
+
+int16_t pidCalculation(int16_t setPoint, int16_t processValue, struct PID_STRUCT *pidStruct){
+	int16_t p_term, error;
+	int16_t outPut;
+	
+	error = setPoint - processValue;
+	
+
+	
+	if(error > pidStruct->maxError){
+		p_term = INT16_MAX;
+	}else if(error < -pidStruct->maxError){
+		p_term = -INT16_MAX;
+	}else{
+		//p_term = pidStruct->P_Factor * error;
+		p_term = 3 * error;
+	}
+	
+	I2CStart(0x04);
+	I2CDataSend(error >> 8);
+	I2CDataSend( error & 0xff);
+	I2CDataSend(p_term >> 8);
+	I2CDataSend( p_term & 0xff);	
+	I2CStop();
+		
+	outPut = p_term;
+	
+	//if(outPut < 0)outPut 
+	
+	//return ((uint8_t)outPut);
+	return outPut;
+}
+
+void motorSpeedLeft(uint8_t speed, bool reverse){//The alternate motor functions use the full range of 0-255 instead of 0-100. This allows more resolution however an extra input is needed to set reverse
+	//IN1 - OC1B - PB2         IN2 - OC1A - PB1
+	DDRB  |= 0b00000110;//Sets ports as outputs
+	TCCR1B = 0b00000011;//sets pre-scaler at 64
+	
+	if(reverse)//To go in reverse only use IN2
+	{
+		TCCR1A = 0b10000001;//disables pin PB1
+		OCR1A  = speed;
+	}
+	else if(speed == 0) TCCR1A = 0b00000001;
+	else
+	{
+		TCCR1A = 0b00100001;//disables pin PB2
+		OCR1B  = speed;
+	}	
+}
+
+void motorSpeedRight(uint8_t speed, bool reverse){
+	//IN1 - OC0A - PD6         IN2 - OC0B - PD5
+	DDRD  |= 0b01100000;//Sets ports direction
+	TCCR0B = 0b00000011;//Sets pre-scale at 64
+	
+	if(reverse)//To go in reverse only use IN2
+	{
+		TCCR0A = 0b00100001; //Disables IN1 pin(PD6)
+		OCR0B = speed;//Timer counter register 0B converts percent to 8 bit
+	}
+	else if(speed == 0) TCCR0A = 0b00000001;//Disables both out pins, non braking
+	else
+	{
+		TCCR0A = 0b10000001; //Disables IN2 pin(PD5)
+		OCR0A = speed;//Timer counter register 0A converts percent to 8 bit
+	}	
+}
+
+void sensorTestCalibration(){
+	//The expected behavior is described bellow
+	//If greater than too close speed up
+	//If less than close but greater than normal normal speed
+	//If less than normal but greater than far slow 
+	//If less than far normal speed
+	
+	#define CLOSE_R 4000
+	#define NORMAL_R 3400
+	#define FAR_R 2500
+	
+	uint16_t distance = 0;
+	
+	for(;;){
+		distance = readIR(IR_RIGHT);
+		
+		if(distance > CLOSE_R){
+			motorSpeedRight(100);
+		}else if(distance > NORMAL_R){
+			motorSpeedRight(50);
+		}else if(distance > FAR_R){
+			motorSpeedRight(20);
+		}else{
+			motorSpeedRight(0);
+		}
+	}
+}
+
+void moveStraight(){
+	motorSpeed(25,25);
+	#define speedL 25
+	#define speedR 25
+	motorSpeed(speedL,speedR);
+	
+	
+	#define CLOSE_R 4000
+	#define NORMAL_R 3200
+	#define FAR_R 2500
+	
+	#define CLOSE_L CLOSE_R
+	#define NORMAL_L NORMAL_R
+	#define FAR_L FAR_R
+	
+	uint16_t distanceL = 0;	
+	uint16_t distanceR = 0;
+	uint16_t distanceFront = 0;
+	uint8_t frontDelay = 0;
+	#define ADJUST 3
+	
+	//for(;;){
+	//	_delay_ms(10);
+	//}
+	
+	for(;;){
+		distanceL = readIR(IR_LEFT);
+		distanceR = readIR(IR_RIGHT);
+		distanceFront = readIR(IR_FRONT);
+		
+		if(distanceFront > 3500){
+			frontDelay++;
+		}else{
+			frontDelay = 0;
+		}
+		
+		if(frontDelay > 5){
+			motorBrake(true,true);
+			return;
+		}
+		
+		if(distanceL > CLOSE_L){
+			motorSpeedLeft(speedL + ADJUST);
+			}else if(distanceL > NORMAL_L){
+			motorSpeedLeft(speedL);
+			}else if(distanceL > FAR_L){
+			motorSpeedLeft(speedL - ADJUST - 2);
+			}else{
+			motorSpeedLeft(speedL);
+		}
+		
+		if(distanceR > CLOSE_R){
+			motorSpeedRight(speedR + ADJUST);
+			}else if(distanceR > NORMAL_R){
+			motorSpeedRight(speedR);
+			}else if(distanceR > FAR_R){
+			motorSpeedRight(speedR - ADJUST - 2);
+			}else{
+			motorSpeedRight(speedR);
+		}
+		
+		_delay_ms(10);		
+	}
+}
+
+void beep(){
+	DDRB  |= 0b00010000;
+	PORTB |= 0b00010000;
+	
+	_delay_ms(100);
+	
+	PORTB &= 0b11101111;
 }
