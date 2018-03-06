@@ -394,7 +394,7 @@ void delayS(unsigned int S)//Wait time in seconds
 }
 
 void backAlign(){//Back Align for walls
-	motorSpeed(-25,-20);
+	motorSpeed(-23,-23);
 	delayS(2);
 	motorSpeed(0,0);
 }
@@ -732,10 +732,18 @@ void sensorTestCalibration(){
 
 void moveStraight(){
 	//motorSpeed(25,25);
-	#define speedL 25
-	#define speedR 25
-	motorSpeed(speedL,speedR);
+	//#define speedL 25
+	//#define speedR 25
+	//motorSpeed(speedL,speedR);
 	
+	//motorSpeed(25,25);
+	#define speedL 70
+	#define speedR 67
+	//motorSpeed(speedL,speedR);
+	motorSpeedLeft(speedL,false);
+	motorSpeedRight(speedR,false);
+	
+	//for(;;){};
 	
 	#define CLOSE_R 4000
 	#define NORMAL_R 3200
@@ -747,9 +755,10 @@ void moveStraight(){
 	
 	int16_t distanceL = 0;	
 	int16_t distanceR = 0;
+	int16_t error = 0;
 	int16_t distanceFront = 0;
 	uint8_t frontDelay = 0;
-	#define ADJUST 3
+	#define ADJUST 5
 	
 	//for(;;){
 	//	_delay_ms(10);
@@ -759,6 +768,8 @@ void moveStraight(){
 		distanceL = readIR(IR_LEFT);
 		distanceR = readIR(IR_RIGHT);
 		distanceFront = readIR(IR_FRONT);
+		
+		error = distanceL - distanceR;
 		
 		if(distanceFront > 3500){
 			frontDelay++;
@@ -771,26 +782,40 @@ void moveStraight(){
 			return;
 		}
 		
-		if(distanceL > CLOSE_L){
-			motorSpeedLeft(speedL + ADJUST);
-			}else if(distanceL > NORMAL_L){
-			motorSpeedLeft(speedL);
-			}else if(distanceL > FAR_L){
-			motorSpeedLeft(speedL - ADJUST - 2);
-			}else{
-			motorSpeedLeft(speedL);
+		if(error > 200){//Difting left
+			motorSpeedLeft(speedL, false);
+			motorSpeedRight(speedR - ADJUST, false);			
+		}else if(error < 200){//drifting right
+			motorSpeedLeft(speedL - ADJUST - 5, false);
+			motorSpeedRight(speedR, false);			
+		}else{//In range
+			motorSpeedLeft(speedL, false);
+			motorSpeedRight(speedR, false);
 		}
 		
-		if(distanceR > CLOSE_R){
-			motorSpeedRight(speedR + ADJUST);
-			}else if(distanceR > NORMAL_R){
-			motorSpeedRight(speedR);
-			}else if(distanceR > FAR_R){
-			motorSpeedRight(speedR - ADJUST - 2);
-			}else{
-			motorSpeedRight(speedR);
-		}
-		
+		//if(distanceL > CLOSE_L){
+			//motorSpeedLeft(speedL + ADJUST);
+			//}else if(distanceL > NORMAL_L){
+			//motorSpeedLeft(speedL,false);
+			//}else if(distanceL > FAR_L){
+			//motorSpeedLeft(speedL - ADJUST - 2);
+			//}else{
+			//motorSpeedLeft(speedL),false;
+		//}
+		//
+		//if(distanceR > CLOSE_R){
+			//motorSpeedRight(speedR + ADJUST);
+			//}else if(distanceR > NORMAL_R){
+			//motorSpeedRight(speedR,false);
+			//}else if(distanceR > FAR_R){
+			//motorSpeedRight(speedR - ADJUST - 2);
+			//}else{
+			//motorSpeedRight(speedR,false);
+		//}
+		//
+		//if(error < 100 && error > -100){
+			//motorBrake(true,true);
+		//}
 		_delay_ms(10);		
 	}
 }
@@ -803,6 +828,7 @@ void moveStraight2(){
 	motorSpeedLeft(speedL,false);
 	motorSpeedRight(speedR,false);
 	
+	//for(;;);
 	
 	#define CLOSE_R 4000
 	#define NORMAL_R 3200
@@ -816,6 +842,7 @@ void moveStraight2(){
 	int16_t distanceR = 0;
 	int16_t distanceFront = 0;
 	float error = 0;
+	float errorTemp = 0;
 	float lastError = 0;
 	float sumError = 0;
 	int16_t p_term = 0;
@@ -837,9 +864,18 @@ void moveStraight2(){
 		
 		
 		//if(distanceR > FAR_R && distanceL > FAR_L){
-		distanceL += 300;//2000;//7000;//14000
-		error = distanceR - distanceL;
-		p_term = error * 0.005;//0.01;//0.005;//0.003
+		distanceL += 600;//2000;//7000;//14000
+		errorTemp = distanceR - distanceL;
+		//error = log(abs(errorTemp));
+		
+		if(errorTemp < 0){
+			error = log(errorTemp * -1);
+			error *= -1;
+		}else{
+			error = log(errorTemp);
+		}
+		
+		p_term = error * 7.0;//0.01;//0.005;//0.003
 			
 			//error -= 5;
 			
@@ -870,12 +906,12 @@ void moveStraight2(){
 		}
 		
 		sumError = sumError + error;
-		i_term = sumError * 0.1;
+		i_term = sumError * 0.0;
 		
 		if ( speedR + error < 0) error = -speedR;
 		motorSpeedRight((speedR + p_term) + dTerm + i_term, false);
 		if ( speedL - error < 0) error = speedL;
-		motorSpeedLeft((speedL - p_term) - dTerm - i_term,false);
+		//motorSpeedLeft((speedL - p_term) - dTerm - i_term,false);
 		
 		lastError = error;
 		

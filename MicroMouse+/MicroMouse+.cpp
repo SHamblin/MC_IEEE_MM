@@ -33,10 +33,12 @@ int main()
 	//motorSpeedLeft(0);
 	beep();
 	//motorTicksPerSecond(6,6);
+	delayS(4);
+	backAlign();
 	delayS(2);
 	//moveStraight(200,10);
 	//sensorTestCalibration();
-	moveStraight2();
+	moveStraight();
 	//motorSpeed(29,24);
 	//delayS(20);
 	
