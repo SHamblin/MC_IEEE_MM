@@ -88,5 +88,6 @@ void motorSpeedRight(uint8_t speed, bool reverse);
 
 void sensorTestCalibration();
 void moveStraight();
+void moveStraight2();
 
 void beep();

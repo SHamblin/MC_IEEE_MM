@@ -7,6 +7,9 @@ int main()
 {
 	initalSetUp();
 	setupIR();
+	I2C_MODE_FAST
+	//motorSpeed(100,100);
+	//for(;;){_delay_ms(10);}
 	int presses = 0;
 	while( presses < 4 ){//This block keeps the code from running until a button is pressed
 		_delay_ms(10);
@@ -25,15 +28,15 @@ int main()
 	//while(1){
 	//	_delay_ms(250);
 	//} 
-	motorSpeedLeft(25);//With out a buzzer this confirms that the code is running
-	_delay_ms(250);
-	motorSpeedLeft(0);
+	//motorSpeedLeft(25);//With out a buzzer this confirms that the code is running
+	//_delay_ms(250);
+	//motorSpeedLeft(0);
 	beep();
 	//motorTicksPerSecond(6,6);
 	delayS(2);
 	//moveStraight(200,10);
 	//sensorTestCalibration();
-	moveStraight();
+	moveStraight2();
 	//motorSpeed(29,24);
 	//delayS(20);
 	

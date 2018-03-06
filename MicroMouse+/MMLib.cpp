@@ -731,7 +731,7 @@ void sensorTestCalibration(){
 }
 
 void moveStraight(){
-	motorSpeed(25,25);
+	//motorSpeed(25,25);
 	#define speedL 25
 	#define speedR 25
 	motorSpeed(speedL,speedR);
@@ -745,9 +745,9 @@ void moveStraight(){
 	#define NORMAL_L NORMAL_R
 	#define FAR_L FAR_R
 	
-	uint16_t distanceL = 0;	
-	uint16_t distanceR = 0;
-	uint16_t distanceFront = 0;
+	int16_t distanceL = 0;	
+	int16_t distanceR = 0;
+	int16_t distanceFront = 0;
 	uint8_t frontDelay = 0;
 	#define ADJUST 3
 	
@@ -795,11 +795,112 @@ void moveStraight(){
 	}
 }
 
+void moveStraight2(){
+	//motorSpeed(25,25);
+	#define speedL 63
+	#define speedR 70
+	//motorSpeed(speedL,speedR);
+	motorSpeedLeft(speedL,false);
+	motorSpeedRight(speedR,false);
+	
+	
+	#define CLOSE_R 4000
+	#define NORMAL_R 3200
+	#define FAR_R 4000
+	
+	#define CLOSE_L CLOSE_R
+	#define NORMAL_L NORMAL_R
+	#define FAR_L FAR_R
+	
+	int16_t distanceL = 0;
+	int16_t distanceR = 0;
+	int16_t distanceFront = 0;
+	float error = 0;
+	float lastError = 0;
+	float sumError = 0;
+	int16_t p_term = 0;
+	int16_t i_term = 0;
+	int16_t dTerm = 0;
+	uint8_t frontDelay = 0;
+	#define ADJUST 3
+	
+	//for(;;){
+	//	_delay_ms(10);
+	//}
+	
+	for(;;){
+		distanceL = readIR(IR_LEFT);
+		distanceR = readIR(IR_RIGHT);
+		distanceFront = readIR(IR_FRONT);
+		//error = distanceR - distanceL;
+		//error *= 0.05;
+		
+		
+		//if(distanceR > FAR_R && distanceL > FAR_L){
+		distanceL += 300;//2000;//7000;//14000
+		error = distanceR - distanceL;
+		p_term = error * 0.005;//0.01;//0.005;//0.003
+			
+			//error -= 5;
+			
+		//}else if(distanceR > FAR_R){//No wall left
+			//error = distanceR - 3000;
+			//error *= 0.05;
+		//}else if(distanceL > FAR_L){//No wall right
+			//error = NORMAL_R - 3000;
+			//error *= 0.05;
+		//}else{
+			//break;
+		//}
+		
+		#define P_MAX 20
+		
+		if(p_term > P_MAX){
+			p_term = P_MAX;
+		}else if(p_term < -P_MAX){
+			p_term = -P_MAX;
+		}
+		
+		dTerm = 0.0 * (lastError - error);
+		
+		if(error > 10){
+			//error = 0;
+		}else if(error < 10){
+			//error = -10;
+		}
+		
+		sumError = sumError + error;
+		i_term = sumError * 0.1;
+		
+		if ( speedR + error < 0) error = -speedR;
+		motorSpeedRight((speedR + p_term) + dTerm + i_term, false);
+		if ( speedL - error < 0) error = speedL;
+		motorSpeedLeft((speedL - p_term) - dTerm - i_term,false);
+		
+		lastError = error;
+		
+		if(distanceFront > 3500){
+			frontDelay++;
+		}else{
+			frontDelay = 0;
+		}
+		
+		if(frontDelay > 5){
+			//motorBrake(true,true);
+			//return;
+		}
+		
+		
+		
+		_delay_ms(10);
+	}
+}
+
 void beep(){
-	DDRB  |= 0b00010000;
-	PORTB |= 0b00010000;
+	DDRD  |= 0b00010000;
+	PORTD |= 0b00010000;
 	
 	_delay_ms(100);
 	
-	PORTB &= 0b11101111;
+	PORTD &= 0b11101111;
 }
