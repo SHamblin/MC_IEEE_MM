@@ -5,7 +5,7 @@ uint8_t IRDistance[5];//Global int for IR values
 
 int main()
 {
-	initalSetUp();
+	setUpInital();
 	setupIR();
 	I2C_MODE_FAST
 	//motorSpeed(100,100);
@@ -33,12 +33,15 @@ int main()
 	//motorSpeedLeft(0);
 	beep();
 	//motorTicksPerSecond(6,6);
-	delayS(4);
-	backAlign();
 	delayS(2);
+	backAlign();
+	//delayS(2);
 	//moveStraight(200,10);
 	//sensorTestCalibration();
-	moveStraight();
+	//leftTurn();
+	moveStraight(49);
+	leftTurn();
+	motorBrake(true,true);
 	//motorSpeed(29,24);
 	//delayS(20);
 	
