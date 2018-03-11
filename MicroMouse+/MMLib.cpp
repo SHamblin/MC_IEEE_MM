@@ -79,7 +79,15 @@ void setUpInital(){//Initial basic set up of IO registers
 }
 
 void setUpADC(){;//Sets up ADC for use by battery alarm
-	//In progress
+	
+	PRR &=   0b11111110;//turns on the adc by disabling adc power reduction
+	ADMUX =  0b01100110; //First 2 bits enable external voltage reference, next left adjusts result, last for select ADC6
+	ADCSRA = 0b10000110;//Enables ADC and sets pre-scaler of 64.
+	//ADCSRB = 0b00000000;
+	
+	//ADC = (1 << ADSC);
+	
+	
 	//TWPS0=0; TWPS1=0;
 	
 	//ADC6 config code
@@ -88,6 +96,10 @@ void setUpADC(){;//Sets up ADC for use by battery alarm
 	//ADCSRB = 0b00000000;
 	
 	//ADCSRA = 0b11000110;//Enables ADC and sets prescaler value
+}
+
+void setUpIMU(){//Sets up 9DOF IMU
+	
 }
 
 void IRsensorSelect(uint8_t number){//Function to select the sensor on the I2C bus using the I2C multiplexer
@@ -189,22 +201,21 @@ void beep(){//Simple short beep
 	PORTD &= 0b11101111;
 }
 
-double lowBatt(){//low battery warning. This is needed since a lipo is damged if it gets bellow 3V per cell
-	//Voltage divider is on ADC6
-	//1 bit out of 256 is ~.0129 Volts  When Batt V = 9 vout = 3
-	//When Batt V = 6.4  vout = 2.133 V
-	//double BattV = ADCH
-	if(ADCH <= 160)//only reads the upper byte
-	{
-		while(1)//Locks code into low batt alarm
-		{
+void lowBatt(){//low battery warning. This is needed since a lipo is damaged if it gets bellow 3V per cell
+	ADCSRA |= 0b01000000;
+	
+	//while(!(ADCSRA && 0b1000000)){//In theory I could keep checking this bit to know when the adc is done
+	//	_delay_us(1);
+	//}
+	
+	_delay_ms(100);
+	
+	if(ADCH < 185){//This works out to be about 7.2 volts, 217 is 8.4 volts
+		for(;;){
 			beep();
 			_delay_ms(500);
-			beep();
-			_delay_ms(500);;
 		}
 	}
-	return((ADCH * 0.0129) * (1/3));//Returns battery voltage
 }
 
 void delayS(unsigned int S){//Wait time in seconds

@@ -45,12 +45,13 @@ void I2CPurge(uint8_t cycles);//This purge command toggles the clock line 9 time
 
 void setUpInital();//Initial basic set up of IO registers
 void setUpADC();//Sets up ADC for use by battery alarm
+void setUpIMU();//Sets up 9DOF IMU
 void IRsensorSelect(uint8_t number);//Function to select the sensor on the I2C bus using the I2C multiplexer
 void setupIR();//This function configures the IR sensors. It sets up all 3 connected sensors.
 uint16_t readIR(uint8_t sensor);//Reads from a single selected IR sensor
 
 void beep();//Simple short beep
-double lowBatt();//low battery warning. This is needed since a lipo is damged if it gets bellow 3V per cell
+void lowBatt();//low battery warning. This is needed since a lipo is damged if it gets bellow 3V per cell
 void delayS(unsigned int S);//Easy function for large delays
 void sensorTestCalibration();//Diagnostic function to help test sensors at the competition, add more as needed
 
