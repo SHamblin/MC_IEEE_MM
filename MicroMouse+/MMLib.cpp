@@ -100,6 +100,12 @@ void setUpADC(){;//Sets up ADC for use by battery alarm
 
 void setUpIMU(){//Sets up 9DOF IMU
 	
+	I2CPurge(1);
+	
+	I2CStart(IMU_GYRO_WRITE);
+	I2CDataSend(0x10);//Select CTRL_REG1_G
+	I2CDataSend(0b10010011);//Sets a Hz of 238 with cutoff of 78, and scale of 500 dps
+	I2CStop();
 }
 
 void IRsensorSelect(uint8_t number){//Function to select the sensor on the I2C bus using the I2C multiplexer
@@ -190,7 +196,23 @@ uint16_t readIR(uint8_t sensor){//Reads from a single selected IR sensor
 	return result;
 }
 
-
+int16_t readGyroZ(){//Reads the Z axis of the gyro
+	uint8_t MSByte, LSByte;
+	int16_t result = 0;
+	
+	I2CStart(IMU_GYRO_WRITE);
+	I2CDataSend(0x1C);//Selects OUT_Z_G MSB byte, value is expresesed in a 16bit word two's complement
+	I2CStart(IMU_GYRO_READ);
+	LSByte = I2CDataRead(true);
+	MSByte = I2CDataRead(false);
+	I2CStop();
+	
+	result = MSByte;
+	result = result << 8;
+	result += LSByte;
+	
+	return result;
+}
 
 void beep(){//Simple short beep
 	DDRD  |= 0b00010000;

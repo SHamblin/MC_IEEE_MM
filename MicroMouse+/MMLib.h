@@ -14,7 +14,11 @@
 #define I2C_MULTIPLEXER_WRITE 0b11101110
 #define I2C_MULTIPLEXER_READ  0b11101111
 #define IR_WRITE 0x26  
-#define IR_READ  0x27  
+#define IR_READ  0x27
+#define IMU_GYRO_WRITE 0xD6
+#define IMU_GYRO_READ  0xD7
+#define IMU_MAG_WRITE  0x3C 
+#define IMU_MAG_READ   0x3D
 #define I2C_MODE_NORMAL TWBR=32;
 #define I2C_MODE_FAST   TWBR=2;
 #define IR_LEFT        0b00010000
@@ -49,6 +53,7 @@ void setUpIMU();//Sets up 9DOF IMU
 void IRsensorSelect(uint8_t number);//Function to select the sensor on the I2C bus using the I2C multiplexer
 void setupIR();//This function configures the IR sensors. It sets up all 3 connected sensors.
 uint16_t readIR(uint8_t sensor);//Reads from a single selected IR sensor
+int16_t readGyroZ();//Reads the Z axis of the gyro
 
 void beep();//Simple short beep
 void lowBatt();//low battery warning. This is needed since a lipo is damged if it gets bellow 3V per cell

@@ -7,6 +7,7 @@ int main()
 {
 	setUpInital();
 	setUpADC();
+	setUpIMU();
 	setupIR();
 	I2C_MODE_FAST
 	//motorSpeed(100,100);
@@ -29,6 +30,17 @@ int main()
 	beep();
 	
 	lowBatt();
+	
+	int16_t gyroZ;
+	
+	for(;;){
+		gyroZ = readGyroZ();
+		
+		if(gyroZ > 200){
+			beep();
+		}
+		_delay_ms(20);
+	}
 	
 	delayS(2);
 	backAlign();
