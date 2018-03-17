@@ -31,12 +31,16 @@ int main()
 	
 	lowBatt();
 	
+	delayS(2);
+	
+	moveStraightGyro();
+	
 	int16_t gyroZ;
 	
 	for(;;){
 		gyroZ = readGyroZ();
 		
-		if(gyroZ > 200){
+		if(gyroZ < -200){
 			beep();
 		}
 		_delay_ms(20);

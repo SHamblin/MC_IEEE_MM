@@ -67,7 +67,31 @@ void I2CPurge(uint8_t cycles){//This purge command toggles the clock line 9 time
 	_delay_us(40);//Wait to make sure the bus stabalises, probably not needed here just in case
 }
 
+void I2CDebugOut(int8_t data){//I2C Debug outputs. Spits data out on the I2C to be grabed by the scope
+	I2CStart(0x02);//Starts a write to address 1, LSB is used as R/W flag
+	I2CDataSend(data);
+	I2CStop();
+}
 
+void I2CDebugOut(uint8_t data){
+	I2CStart(0x02);//Starts a write to address 1, LSB is used as R/W flag
+	I2CDataSend(data);
+	I2CStop();
+}
+
+void I2CDebugOut(int16_t data){
+	I2CStart(0x02);//Starts a write to address 1, LSB is used as R/W flag
+	I2CDataSend(data >> 8);//Sends MSByte
+	I2CDataSend(data & 0xff);//Sends LSByte
+	I2CStop();	
+}
+
+void I2CDebugOut(uint16_t data){
+	I2CStart(0x02);//Starts a write to address 1, LSB is used as R/W flag
+	I2CDataSend(data >> 8);
+	I2CDataSend(data & 0xff);
+	I2CStop();	
+}
 
 void setUpInital(){//Initial basic set up of IO registers
 	_delay_ms(10);//Gives time for every thing to stabalise, might not be needed
@@ -79,23 +103,9 @@ void setUpInital(){//Initial basic set up of IO registers
 }
 
 void setUpADC(){;//Sets up ADC for use by battery alarm
-	
 	PRR &=   0b11111110;//turns on the adc by disabling adc power reduction
 	ADMUX =  0b01100110; //First 2 bits enable external voltage reference, next left adjusts result, last for select ADC6
 	ADCSRA = 0b10000110;//Enables ADC and sets pre-scaler of 64.
-	//ADCSRB = 0b00000000;
-	
-	//ADC = (1 << ADSC);
-	
-	
-	//TWPS0=0; TWPS1=0;
-	
-	//ADC6 config code
-	//ADMUX  = 0b01100110;//Some setings and slects ADC
-	
-	//ADCSRB = 0b00000000;
-	
-	//ADCSRA = 0b11000110;//Enables ADC and sets prescaler value
 }
 
 void setUpIMU(){//Sets up 9DOF IMU
@@ -197,6 +207,7 @@ uint16_t readIR(uint8_t sensor){//Reads from a single selected IR sensor
 }
 
 int16_t readGyroZ(){//Reads the Z axis of the gyro
+	//Left is positive
 	uint8_t MSByte, LSByte;
 	int16_t result = 0;
 	
@@ -276,7 +287,68 @@ void sensorTestCalibration(){//Diagnostic function to help test sensors at the c
 	}
 }
 
+void pidStructInit(const float PTune, const float ITune, struct PID_STRUCT *pidStruct){
+	pidStruct->P_Factor = PTune;
+	pidStruct->I_Factor = ITune;
+	
+	pidStruct->sumError = 0;
+	pidStruct->maxError = INT8_MAX / (pidStruct->P_Factor + 1);
+	pidStruct->maxSumError = (INT32_MAX / 2) / (pidStruct->I_Factor + 1);
+}
 
+int16_t pidCalculation(int16_t setPoint, int16_t processValue, struct PID_STRUCT *pidStruct){
+	int16_t p_term, error;
+	int32_t sumE, i_term;
+	int32_t outPut;
+
+	error = setPoint - processValue;
+	
+	//Calculate P Term
+	if(error > pidStruct->maxError){
+		p_term = INT8_MAX;
+	}else if(error < -pidStruct->maxError){
+		p_term = -INT8_MAX;
+	}else{
+		p_term = pidStruct->P_Factor * error;
+	}
+
+	p_term = pidStruct->P_Factor * error;
+	
+	//Calculate I Term
+	sumE = pidStruct->sumError + error;
+	//if(sumE > pidStruct->maxSumError){
+		//i_term = (INT32_MAX/2);
+		//pidStruct->sumError = pidStruct->maxSumError;
+	//}else if(sumE < -pidStruct->maxSumError){
+		//i_term = -(INT32_MAX/2);
+		//pidStruct->sumError = -pidStruct->maxSumError;
+	//}else{
+		//pidStruct->sumError = sumE;
+		//i_term = pidStruct->I_Factor * pidStruct->sumError;
+	//}
+	
+	pidStruct->sumError = sumE;
+	i_term = pidStruct->I_Factor * pidStruct->sumError;
+	
+	//I2CStart(0x04);
+	//I2CDataSend(error >> 8);
+	//I2CDataSend( error & 0xff);
+	//I2CDataSend(p_term >> 8);
+	//I2CDataSend( p_term & 0xff);
+	//I2CStop();
+
+	outPut = p_term + i_term;
+	//outPut = p_term;
+	if(outPut > INT8_MAX){
+		outPut = INT8_MAX;
+	}else if(outPut < -INT8_MAX){
+		outPut = -INT8_MAX;
+	}
+	//if(outPut < 0)outPut
+
+	//return ((uint8_t)outPut);
+	return ((int16_t)outPut);
+}
 
 void motorSpeedLeft(int8_t speed){//Old function, -100<->0<->100, limited resolution since it's range is 0-100 int
 
@@ -489,8 +561,37 @@ void moveStraight(int16_t ticks){//This function will move the robot forward in 
 	}
 }
 
-void straight(){
+void moveStraightGyro(){//Move forward using the gyro to keep the bot straight
+	int16_t gyroValue = 0;
+	const int16_t gyroOffset = readGyroZ();
+	const float PTune = 0.0075;
+	const float ITune = 0.001;
+	struct PID_STRUCT pidStruct;
+	int16_t pidReturn;
 	
+	const int8_t motorSpeed = 65;
+	
+	pidStructInit(PTune, ITune, &pidStruct);
+	
+	for(;;){
+		gyroValue = readGyroZ() - gyroOffset;
+		
+		
+		pidReturn = pidCalculation(0, gyroValue, &pidStruct);//Will return a negative value if drifing left
+		
+		I2CDebugOut(gyroValue);
+		I2CDebugOut(pidReturn * -1);
+		
+		
+		//if(pidReturn + motorSpeed > motorSpeed * 2){
+		//	pidReturn = motorSpeed;
+		//}
+		
+		motorSpeedLeft(motorSpeed - pidReturn,false);
+		motorSpeedRight(motorSpeed + pidReturn,false);
+		
+		_delay_ms(10);
+	}
 }
 
 void leftTurn(){
@@ -857,47 +958,7 @@ void west(uint8_t heading){
 	//}
 //}
 //
-//void pidStructInit(const int16_t PTune, struct PID_STRUCT *pidStruct){
-	//pidStruct->P_Factor = PTune;
-	//pidStruct->maxError = INT16_MAX / (pidStruct->P_Factor + 1);
-//}
-//
-//int16_t pidCalculation(int16_t setPoint, int16_t processValue, struct PID_STRUCT *pidStruct){
-	//int16_t p_term, error;
-	//int16_t outPut;
-	//
-	//error = setPoint - processValue;
-	//
-//
-	//
-	//if(error > pidStruct->maxError){
-		//p_term = INT16_MAX;
-		//}else if(error < -pidStruct->maxError){
-		//p_term = -INT16_MAX;
-		//}else{
-		////p_term = pidStruct->P_Factor * error;
-		//p_term = 3 * error;
-	//}
-	//
-	//I2CStart(0x04);
-	//I2CDataSend(error >> 8);
-	//I2CDataSend( error & 0xff);
-	//I2CDataSend(p_term >> 8);
-	//I2CDataSend( p_term & 0xff);
-	//I2CStop();
-	//
-	//outPut = p_term;
-	//
-	////if(outPut < 0)outPut
-	//
-	////return ((uint8_t)outPut);
-	//return outPut;
-//}
-//
-//
-//
-//
-//
+
 //void moveStraight2(){
 	////motorSpeed(25,25);
 	//#define speedL 63
