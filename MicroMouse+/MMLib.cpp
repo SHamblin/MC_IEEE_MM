@@ -330,6 +330,12 @@ int16_t pidCalculation(int16_t setPoint, int16_t processValue, struct PID_STRUCT
 	pidStruct->sumError = sumE;
 	i_term = pidStruct->I_Factor * pidStruct->sumError;
 	
+	if(i_term > INT16_MAX){
+		i_term = INT16_MAX - 1;
+	}else if(i_term < -INT16_MAX){
+		i_term = -INT16_MAX + 1;
+	}
+	
 	//I2CStart(0x04);
 	//I2CDataSend(error >> 8);
 	//I2CDataSend( error & 0xff);
@@ -583,12 +589,127 @@ void moveStraightGyro(){//Move forward using the gyro to keep the bot straight
 		I2CDebugOut(pidReturn * -1);
 		
 		
-		//if(pidReturn + motorSpeed > motorSpeed * 2){
-		//	pidReturn = motorSpeed;
-		//}
+		if(pidReturn + motorSpeed > motorSpeed * 2){
+			pidReturn = motorSpeed;
+		}else if(pidReturn + motorSpeed < 0){
+			pidReturn = -motorSpeed;
+		}
 		
 		motorSpeedLeft(motorSpeed - pidReturn,false);
 		motorSpeedRight(motorSpeed + pidReturn,false);
+		
+		_delay_ms(10);
+	}
+}
+
+void moveStraightGyro(uint16_t ticks){//Move forward using the gyro to keep the bot straight and travel a specified ticks
+	int16_t gyroValue = 0;
+	const int16_t gyroOffset = readGyroZ();
+	const float PTune = 0.0075;
+	const float ITune = 0.001;
+	struct PID_STRUCT pidStruct;
+	int16_t pidReturn;
+	int8_t leftStatus = LEFT_ENCODER;
+	int8_t rightStatus = RIGHT_ENCODER;
+	const int8_t motorSpeed = 65;
+	uint16_t ticksRecoreded = 0;
+	
+	pidStructInit(PTune, ITune, &pidStruct);
+	
+	for(;;){
+		gyroValue = readGyroZ() - gyroOffset;
+		
+		
+		pidReturn = pidCalculation(0, gyroValue, &pidStruct);//Will return a negative value if drifing left
+		
+		I2CDebugOut(gyroValue);
+		I2CDebugOut(pidReturn * -1);
+		
+		
+		if(pidReturn + motorSpeed > motorSpeed * 2){
+			pidReturn = motorSpeed;
+			}else if(pidReturn + motorSpeed < 0){
+			pidReturn = -motorSpeed;
+		}
+		
+		motorSpeedLeft(motorSpeed - pidReturn,false);
+		motorSpeedRight(motorSpeed + pidReturn,false);
+		
+		
+
+		if(LEFT_ENCODER != leftStatus){//Left ticks see if pin has changed
+			leftStatus = LEFT_ENCODER;//Reused mask
+			ticksRecoreded++;
+		}
+
+		if(RIGHT_ENCODER != rightStatus){//Right ticks see if pin has changed
+			rightStatus = RIGHT_ENCODER;//Reused mask
+			ticksRecoreded++;
+		}		
+		
+		if(ticksRecoreded >= ticks){
+			return;
+		}
+		
+		_delay_ms(10);
+	}
+}
+
+void leftTurnGyro(){//Preform a left turn using the gyro
+	int16_t gyroValue = 0;
+	const int16_t gyroOffset = readGyroZ();
+	const float PTune = 0.007;
+	const float ITune = 0.00003;
+	struct PID_STRUCT pidStruct;
+	int16_t pidReturn;
+	const int16_t turnComplete = 2300;
+	int16_t gyroChange = 0;
+	
+	pidStructInit(PTune, ITune, &pidStruct);
+	
+	for(;;){
+		gyroValue = readGyroZ() - gyroOffset;
+		
+		gyroChange += (gyroValue/100); 
+		
+		if(gyroChange > turnComplete){
+			break;
+		}
+		
+		pidReturn = pidCalculation(3000, gyroValue, &pidStruct);//Will return a negative value if drifing left
+		
+		motorSpeedLeft(-pidReturn-6);
+		motorSpeedRight(pidReturn);
+		
+		_delay_ms(10);
+	}
+}
+
+void rightTurnGyro(){//Preform a left turn using the gyro
+	int16_t gyroValue = 0;
+	const int16_t gyroOffset = readGyroZ();
+	const float PTune = 0.006;
+	const float ITune = 0.00002;
+	struct PID_STRUCT pidStruct;
+	int16_t pidReturn;
+	const int16_t turnComplete = -2300;
+	int16_t gyroChange = 0;
+	
+	pidStructInit(PTune, ITune, &pidStruct);
+	
+	for(;;){
+		gyroValue = readGyroZ() - gyroOffset;
+		
+		gyroChange += (gyroValue/100);
+		
+		if(gyroChange < turnComplete){
+			break;
+		}
+		
+		pidReturn = pidCalculation(-3000, gyroValue, &pidStruct);//Will return a negative value if drifing left
+		
+		motorSpeedLeft(-pidReturn + 6);
+		motorSpeedRight(pidReturn);
 		
 		_delay_ms(10);
 	}

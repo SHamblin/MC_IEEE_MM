@@ -89,6 +89,9 @@ void motorBrake(bool Left, bool Right);//Function to brake each motor
 void backAlign();
 void moveStraight(int16_t ticks);//Uses ir distance sensors for movement and encoders for distance. This function will move the robot forward in ticks or CM, not sure which yet
 void moveStraightGyro();//Move forward using the gyro to keep the bot straight
+void moveStraightGyro(uint16_t ticks);//Move forward using the gyro to keep the bot straight and travel a specified ticks
+void leftTurnGyro();
+void rightTurnGyro();
 
 //Purely for gird based movements
 void straight();//Moves One Square
