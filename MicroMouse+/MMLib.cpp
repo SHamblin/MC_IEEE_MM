@@ -630,6 +630,7 @@ void moveStraightGyro(uint16_t ticks){//Move forward using the gyro to keep the 
 	const int8_t motorSpeed = 65;
 	uint16_t ticksRecoreded = 0;
 	const int16_t maxErrorIR = 1000;
+	const int16_t closeIR = 3300;
 	
 	pidStructInit(PTune, ITune, &pidStruct);
 	pidStructInit(wallPTune, wallITune, &irPidStruct);
