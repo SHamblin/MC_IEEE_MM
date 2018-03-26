@@ -6,7 +6,8 @@
 int8_t I2CStatus = 0,I2CWait = 0;
 
 uint8_t I2CStart(uint8_t address){//Transmits I2C start condition with the address
-	TWCR = (1<<TWINT)|(1<<TWSTA)|(1<<TWEN);//This enables and sets up an I2C start condition
+	TWCR = 0;//Clears TWCR first
+	TWCR = (1<<TWINT)|(0<<TWEA)|(1<<TWSTA)|(1<<TWEN);//This enables and sets up an I2C start condition
 	while(!(TWCR & (1<<TWINT)));//Waits for ready state?
 	TWDR = address;//Passes address to transmit to the I2C hardware
 	TWCR = (1<<TWINT) | (1<<TWEN);
@@ -34,6 +35,12 @@ uint8_t I2CDataRead(bool more){//Reads data off I2C bus. Only set more to true i
 
 void I2CStop(){//Stops and finishes I2C transmission
 	TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWSTO);//Sets hardware for an I2C stop condition
+	
+	_delay_us(4);
+	
+	TWCR = 0;//Clear TWCR tp set up I2C Slave
+	TWCR = (1<<TWEA)|(1<<TWEN);//Enable slave mode again
+	
 }
 
 void I2CPurge(uint8_t cycles){//This purge command toggles the clock line 9 times for each cycle. This will clear junk left in the i2c buffer of i2c devices
@@ -100,6 +107,8 @@ void setUpInital(){//Initial basic set up of IO registers
 	DDRC &=  0b11110000;//Makes sure that the buttons and encoders are inputs
 	PORTC = 0;//Makes sure all other parts of PORTC are initalised
 	PORTC |= 0b00001111;//Enables pull up for the two buttons and helps assist the pull ups on the encoders
+	
+	TWAR = 42;//Sets address when acting as a slave
 }
 
 void setUpADC(){;//Sets up ADC for use by battery alarm
@@ -158,7 +167,8 @@ void setupIR(){//This function configures the IR sensors. It sets up all 3 conne
 	
 		I2CStart(IR_WRITE);//This sets the rate for automatic measurements
 		I2CDataSend(0x82);
-		I2CDataSend(0b00000101);//Sets it to 62.5 measurements/s
+		//I2CDataSend(0b00000101);//Sets it to 62.5 measurements/s
+		I2CDataSend(0b00000111);//Sets it to 250 measurements/s, this was in an effort to improve response time
 		I2CStop();	
 	
 		_delay_us(10);//Delay between comands. Not sure if needed but I like the idea
@@ -462,27 +472,28 @@ void backAlign(){//Back Align for walls
 	_delay_ms(500);
 	//motorSpeed(0,0);
 	
-	uint8_t leftEncode = LEFT_ENCODER;
-	uint8_t rightEncode = RIGHT_ENCODER;
+	//uint8_t leftEncode = LEFT_ENCODER;
+	//uint8_t rightEncode = RIGHT_ENCODER;
 	
-	for(;;){
-		if(leftEncode != LEFT_ENCODER){
-			motorSpeedLeft(0,false);
-		}
-		
-		if(rightEncode != RIGHT_ENCODER){
-			motorSpeedRight(0,false);
-		}
-		
-		if(leftEncode != LEFT_ENCODER && rightEncode != RIGHT_ENCODER){
-			break;
-		}
-	}
+	//for(;;){
+		//if(leftEncode != LEFT_ENCODER){
+			//motorSpeedLeft(0,false);
+		//}
+		//
+		//if(rightEncode != RIGHT_ENCODER){
+			//motorSpeedRight(0,false);
+		//}
+		//
+		//if(leftEncode != LEFT_ENCODER && rightEncode != RIGHT_ENCODER){
+			//break;
+		//}
+	//}
 	motorSpeedBoth(0,0);
-	beep();
+	//beep();
 	_delay_ms(200);
+	moveStraightGyro(8);
 	beep();
-	delayS(2);
+	delayS(1);
 	
 }
 
@@ -604,36 +615,53 @@ void moveStraightGyro(){//Move forward using the gyro to keep the bot straight
 
 void moveStraightGyro(uint16_t ticks){//Move forward using the gyro to keep the bot straight and travel a specified ticks
 	int16_t gyroValue = 0;
+	int16_t errorIR = 0;
 	const int16_t gyroOffset = readGyroZ();
 	const float PTune = 0.0075;
 	const float ITune = 0.001;
+	const float wallPTune = 0.0025;
+	const float wallITune = 0.0007;
 	struct PID_STRUCT pidStruct;
-	int16_t pidReturn;
+	struct PID_STRUCT irPidStruct;
+	int16_t pidGyroReturn;
+	int16_t pidIrReturn;
 	int8_t leftStatus = LEFT_ENCODER;
 	int8_t rightStatus = RIGHT_ENCODER;
 	const int8_t motorSpeed = 65;
 	uint16_t ticksRecoreded = 0;
+	const int16_t maxErrorIR = 1000;
 	
 	pidStructInit(PTune, ITune, &pidStruct);
+	pidStructInit(wallPTune, wallITune, &irPidStruct);
 	
 	for(;;){
 		gyroValue = readGyroZ() - gyroOffset;
+		errorIR = readIR(IR_LEFT) - readIR(IR_RIGHT);//Positive value if it deviates left same as the gyro
 		
+
 		
-		pidReturn = pidCalculation(0, gyroValue, &pidStruct);//Will return a negative value if drifing left
-		
-		I2CDebugOut(gyroValue);
-		I2CDebugOut(pidReturn * -1);
-		
-		
-		if(pidReturn + motorSpeed > motorSpeed * 2){
-			pidReturn = motorSpeed;
-			}else if(pidReturn + motorSpeed < 0){
-			pidReturn = -motorSpeed;
+		pidGyroReturn = pidCalculation(0, gyroValue, &pidStruct);//Will return a negative value if drifing left
+		pidIrReturn = pidCalculation(0, errorIR, &irPidStruct);
+
+		if(errorIR > maxErrorIR || errorIR < -maxErrorIR){
+			beep();
+			errorIR = 0;
+			pidIrReturn = 0;
+			irPidStruct.sumError = 0;
 		}
 		
-		motorSpeedLeft(motorSpeed - pidReturn,false);
-		motorSpeedRight(motorSpeed + pidReturn,false);
+		I2CDebugOut(gyroValue);
+		I2CDebugOut(pidGyroReturn * -1);
+		
+		
+		if(pidGyroReturn + motorSpeed > motorSpeed * 2){
+			pidGyroReturn = motorSpeed;
+		}else if(pidGyroReturn + motorSpeed < 0){
+			pidGyroReturn = -motorSpeed;
+		}
+		
+		motorSpeedLeft(motorSpeed - pidGyroReturn - pidIrReturn,false);
+		motorSpeedRight(motorSpeed + pidGyroReturn + pidIrReturn,false);
 		
 		
 
@@ -678,7 +706,7 @@ void leftTurnGyro(){//Preform a left turn using the gyro
 		
 		pidReturn = pidCalculation(3000, gyroValue, &pidStruct);//Will return a negative value if drifing left
 		
-		motorSpeedLeft(-pidReturn-6);
+		motorSpeedLeft(-pidReturn-3);
 		motorSpeedRight(pidReturn);
 		
 		_delay_ms(10);
@@ -708,7 +736,7 @@ void rightTurnGyro(){//Preform a left turn using the gyro
 		
 		pidReturn = pidCalculation(-3000, gyroValue, &pidStruct);//Will return a negative value if drifing left
 		
-		motorSpeedLeft(-pidReturn + 6);
+		motorSpeedLeft(-pidReturn + 3);
 		motorSpeedRight(pidReturn);
 		
 		_delay_ms(10);

@@ -34,6 +34,8 @@
 #define BUTTON_3 (PINC & 0b00001000)	//On PC3
 #define LEFT_ENCODER  (PINC & 0b00000001) //On PC0
 #define RIGHT_ENCODER (PINC & 0b00000010) //On PC1
+#define SIGNAL_READY
+#define SIGNAL_NOT_READY
 
 #define NORTH 0
 #define EAST 1

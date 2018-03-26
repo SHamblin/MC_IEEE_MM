@@ -32,16 +32,18 @@ int main()
 	lowBatt();
 	
 	delayS(2);
+	//backAlign();
+	//delayS(10);
 	//leftTurnGyro();
 	//rightTurnGyro();
-	moveStraightGyro(48);//Circumference is 186.9mm  so 11.6mm per step   46 should be 3 squares  45 is ideal
-	//motorBrake(true,true);
+	//moveStraightGyro();
+	moveStraightGyro(20000);//49    Circumference is 186.9mm  so 11.6mm per step   46 should be 3 squares  45 is ideal
 	motorSpeedLeft(0);
 	motorSpeedRight(0);
 	_delay_ms(500);
 	
 	leftTurnGyro();
-	motorBrake(true,true);
+	//motorBrake(true,true);
 	//motorSpeedLeft(255,true);
 	//motorSpeedRight(255,false);
 	//
