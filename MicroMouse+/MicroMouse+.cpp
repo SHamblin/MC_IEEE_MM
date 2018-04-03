@@ -1,7 +1,14 @@
 //The libarys that this program requiers and the program it's self has been writen by Spencer Hamblin (spencerhamblin@gmail.com)
 
 #include "MMLib.h"//Include for custom MM library
-uint8_t IRDistance[5];//Global int for IR values
+uint8_t direction = NORTH;
+uint8_t walls = 0;
+volatile uint8_t command = 0;
+volatile bool ready = false;
+
+ISR(TWI_vect){//Interupt routine for I2C slave mode
+	
+}
 
 int main()
 {
@@ -10,6 +17,9 @@ int main()
 	setUpIMU();
 	setupIR();
 	I2C_MODE_FAST
+	sei();//Enable interupts, this is for I2C slave mode
+	//beep();
+	//motorSpeedBoth(60,60);
 	//motorSpeed(100,100);
 	//for(;;){_delay_ms(10);}
 	int presses = 0;
@@ -30,8 +40,69 @@ int main()
 	beep();
 	
 	lowBatt();
+	_delay_ms(2000);
+	//leftTurnGyro();
+	_delay_ms(2000);
+	uint16_t irRead = 0;
+	//for(;;){
+		////readMagHeading();
+		////moveStraightGyro(1);
+		////motorSpeedBoth(0,0);
+		//irRead = readIR(IR_FRONT);
+		//if(irRead > 4400) beep();
+		//_delay_ms(50);
+	//}
+
+	//rightTurnGyro();
+	//beep();
+	//moveStraightGyro(75 + 4);
+	moveStraightGyro(14);
+	_delay_ms(500);
+	moveStraightGyro(14);
+	_delay_ms(500);
+	moveStraightGyro(14);
+	_delay_ms(500);
+	moveStraightGyro(14);
+	_delay_ms(500);
+	rightTurnGyro();
+	_delay_ms(500);
+	moveStraightGyro(13);
+	_delay_ms(500);
+	moveStraightGyro(14);
+	_delay_ms(500);
+	rightTurnGyro();
+	_delay_ms(500);
+	moveStraightGyro(13);
+	_delay_ms(500);
+	moveStraightGyro(14);
+
+	leftTurnGyro();
+	_delay_ms(500);
+	_delay_ms(500);
+	moveStraightGyro(14);
+	_delay_ms(500);
+	moveStraightGyro(14);
+
+	_delay_ms(500);
+	rightTurnGyro();
+	_delay_ms(500);
+	moveStraightGyro(14);
+
+	motorSpeedBoth(0,0);
+
 	
-	delayS(2);
+
+	for(;;){
+		//readMagHeading();
+		//moveStraightGyro(1);
+		//motorSpeedBoth(0,0);
+		irRead = readIR(IR_RIGHT);
+		if(irRead > 3300) beep();
+		_delay_ms(50);
+	}
+	
+	backAlign();
+	delayS(23);
 	//backAlign();
 	//delayS(10);
 	//leftTurnGyro();
@@ -62,57 +133,33 @@ int main()
 		_delay_ms(10);
 	}
 	
-	
-	int16_t gyroZ;
-	
+	//Main loop for the maze
+	backAlign();
 	for(;;){
-		gyroZ = readGyroZ();
+		walls = readWalls(direction);
 		
-		if(gyroZ < -200){
-			beep();
+		while(!ready){
+			_delay_ms(10);
 		}
-		_delay_ms(20);
+		
+		switch(command){
+			case NORTH:
+				north(direction);
+				direction = NORTH;
+			break;
+			case EAST:
+				east(direction);
+				direction = EAST;
+			break;
+			case SOUTH:
+				south(direction);
+				direction = SOUTH;
+			break;
+			case WEST:
+				west(direction);
+				direction = WEST;
+			break;
+		}
 	}
 	
-	delayS(2);
-	backAlign();
-	moveStraight(49);
-	leftTurn();
-	motorBrake(true,true);
-	
-	delayS(200);
-	
-	//int dis = 0;	
-	//
-	//for(;;){
-		//dis = readIR(IR_RIGHT);
-		//
-		//if(dis > 3000){
-			//motorSpeedLeft(25);//Too far
-		//}else{
-			//motorSpeedLeft(28);
-		//}
-	//}
-	//
-	//for(;;){//This is demo code to test the IR sensors
-		//dis = readIR(IR_RIGHT);
-		//
-		//if(dis > 4000){
-			//motorSpeedLeft(20);//Too close
-		//}if(dis > 3000){
-			//motorSpeedLeft(29);//Just Right
-		//}if(dis > 2500){
-			//motorSpeedLeft(35);//Too far
-		//}else{
-			////motorSpeedLeft(0);
-		//}
-		//
-		//dis = readIR(IR_RIGHT);
-		//if(dis > 3500){
-			////motorSpeedRight(30);
-			//}else{
-			////motorSpeedRight(0);
-		//}		
-		//_delay_ms(16);
-	//}
 }

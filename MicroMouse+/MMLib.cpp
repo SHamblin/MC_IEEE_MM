@@ -125,6 +125,17 @@ void setUpIMU(){//Sets up 9DOF IMU
 	I2CDataSend(0x10);//Select CTRL_REG1_G
 	I2CDataSend(0b10010011);//Sets a Hz of 238 with cutoff of 78, and scale of 500 dps
 	I2CStop();
+	
+	I2CStart(IMU_MAG_WRITE);
+	I2CDataSend(0x20);//Selects CTRL_REG1
+	I2CDataSend(0b01111100);//Enables high preformace XY and 80Hz, ultra fast mode not enables. I could not find any detials about the ultra fast mode
+	I2CStop();
+	
+	I2CStart(IMU_MAG_WRITE);
+	I2CDataSend(0x22);//Selects CTRL_REG3
+	I2CDataSend(0b00000000);//The main reson for setting this is to enable continuous conversion mode
+	I2CStop();
+	
 }
 
 void IRsensorSelect(uint8_t number){//Function to select the sensor on the I2C bus using the I2C multiplexer
@@ -222,7 +233,7 @@ int16_t readGyroZ(){//Reads the Z axis of the gyro
 	int16_t result = 0;
 	
 	I2CStart(IMU_GYRO_WRITE);
-	I2CDataSend(0x1C);//Selects OUT_Z_G MSB byte, value is expresesed in a 16bit word two's complement
+	I2CDataSend(0x1C);//Selects OUT_Z_G LSB byte, value is expresesed in a 16bit word two's complement
 	I2CStart(IMU_GYRO_READ);
 	LSByte = I2CDataRead(true);
 	MSByte = I2CDataRead(false);
@@ -233,6 +244,39 @@ int16_t readGyroZ(){//Reads the Z axis of the gyro
 	result += LSByte;
 	
 	return result;
+}
+
+float readMagHeading(){//Reads the magnetometer heading
+	uint8_t MSByteX, LSByteX, MSByteY, LSByteY;
+	int16_t xResult, yResult;
+	
+	I2CStart(IMU_MAG_WRITE);
+	I2CDataSend(0x28);//Selects OUT_X_L_M LSB byte, value is expresesed in a 16bit word two's complement
+	I2CStart(IMU_MAG_READ);
+	LSByteX = I2CDataRead(true);
+	MSByteX = I2CDataRead(false);
+	I2CStop();
+	
+	xResult = MSByteX;
+	xResult = xResult << 8;
+	xResult += LSByteX;
+	
+	I2CStart(IMU_MAG_WRITE);
+	I2CDataSend(0x2A);//Selects OUT_Y_L_M LSB byte, value is expresesed in a 16bit word two's complement
+	I2CStart(IMU_MAG_READ);
+	LSByteY = I2CDataRead(true);
+	MSByteY = I2CDataRead(false);
+	I2CStop();
+	
+	yResult = MSByteY;
+	yResult = yResult << 8;
+	yResult += LSByteY;
+	
+	if(xResult < 0){
+		beep();
+	}
+	
+	return 0.0;		
 }
 
 void beep(){//Simple short beep
@@ -467,7 +511,7 @@ void motorBrake(bool Left, bool Right)//Function to brake each motor
 
 
 void backAlign(){//Back Align for walls
-	motorSpeedBoth(20,20);
+	motorSpeedBoth(-20,-20);
 	//delayS(2);
 	_delay_ms(500);
 	//motorSpeed(0,0);
@@ -491,7 +535,8 @@ void backAlign(){//Back Align for walls
 	motorSpeedBoth(0,0);
 	//beep();
 	_delay_ms(200);
-	moveStraightGyro(8);
+	moveStraightGyro(1, false);
+	motorSpeedBoth(0,0);
 	beep();
 	delayS(1);
 	
@@ -611,9 +656,11 @@ void moveStraightGyro(){//Move forward using the gyro to keep the bot straight
 		
 		_delay_ms(10);
 	}
+	
+	motorSpeedBoth(0,0);
 }
 
-void moveStraightGyro(uint16_t ticks){//Move forward using the gyro to keep the bot straight and travel a specified ticks
+void moveStraightGyro(uint16_t ticks, bool center){//Move forward using the gyro to keep the bot straight and travel a specified ticks
 	int16_t gyroValue = 0;
 	int16_t errorIR = 0;
 	const int16_t gyroOffset = readGyroZ();
@@ -629,30 +676,45 @@ void moveStraightGyro(uint16_t ticks){//Move forward using the gyro to keep the 
 	int8_t rightStatus = RIGHT_ENCODER;
 	const int8_t motorSpeed = 65;
 	uint16_t ticksRecoreded = 0;
-	const int16_t maxErrorIR = 1000;
-	const int16_t closeIR = 3300;
+	const int16_t maxErrorIR = 1200;
+	//const int16_t closeIR = 3300;
+	int16_t irRight = 0;
+	int16_t irLeft = 0;
+	int16_t irFront = 0;
 	
 	pidStructInit(PTune, ITune, &pidStruct);
 	pidStructInit(wallPTune, wallITune, &irPidStruct);
 	
+	const uint16_t magic = 3200;
+
 	for(;;){
+		
+		irRight = readIR(IR_RIGHT);
+		irLeft = readIR(IR_LEFT);		
+		
 		gyroValue = readGyroZ() - gyroOffset;
-		errorIR = readIR(IR_LEFT) - readIR(IR_RIGHT);//Positive value if it deviates left same as the gyro
+		//errorIR = irLeft - irRight;//Positive value if it deviates left same as the gyro
 		
 
-		
-		pidGyroReturn = pidCalculation(0, gyroValue, &pidStruct);//Will return a negative value if drifing left
-		pidIrReturn = pidCalculation(0, errorIR, &irPidStruct);
 
-		if(errorIR > maxErrorIR || errorIR < -maxErrorIR){
-			beep();
-			errorIR = 0;
+		
+		pidGyroReturn = pidCalculation(0, gyroValue, &pidStruct);//Will return a negative value if drifting left
+		//pidIrReturn = pidCalculation(0, errorIR, &irPidStruct);
+		
+		if(irRight > magic && irLeft > magic){
 			pidIrReturn = 0;
-			irPidStruct.sumError = 0;
+		}else if(irRight > magic){
+			pidIrReturn = 6;
+			pidStruct.sumError = pidStruct.sumError * 0.70;
+		}else if(irLeft > magic){
+			pidIrReturn = -6;
+			pidStruct.sumError = pidStruct.sumError * 0.70;
+		}else{
+			pidIrReturn = 0;
 		}
 		
-		I2CDebugOut(gyroValue);
-		I2CDebugOut(pidGyroReturn * -1);
+		//I2CDebugOut(gyroValue);
+		//I2CDebugOut(pidGyroReturn * -1);
 		
 		
 		if(pidGyroReturn + motorSpeed > motorSpeed * 2){
@@ -660,6 +722,10 @@ void moveStraightGyro(uint16_t ticks){//Move forward using the gyro to keep the 
 		}else if(pidGyroReturn + motorSpeed < 0){
 			pidGyroReturn = -motorSpeed;
 		}
+		
+		//if(center == false){
+			//pidIrReturn = 0;
+		//}
 		
 		motorSpeedLeft(motorSpeed - pidGyroReturn - pidIrReturn,false);
 		motorSpeedRight(motorSpeed + pidGyroReturn + pidIrReturn,false);
@@ -677,11 +743,135 @@ void moveStraightGyro(uint16_t ticks){//Move forward using the gyro to keep the 
 		}		
 		
 		if(ticksRecoreded >= ticks){
-			return;
+			irFront = readIR(IR_FRONT);
+
+			if(irFront > 2800){
+				if(irFront > 4400){
+					motorSpeedBoth(0,0);
+					return;
+
+				}
+			}else{
+
+				motorSpeedBoth(0,0);
+				return;
+
+			}
+
 		}
 		
 		_delay_ms(10);
 	}
+	
+	motorSpeedBoth(0,0);
+}
+
+void moveStraightGyroOld(uint16_t ticks, bool center){//Move forward using the gyro to keep the bot straight and travel a specified ticks, this is a newer one
+	int16_t gyroValue = 0;
+	int16_t errorIR = 0;
+	const int16_t gyroOffset = readGyroZ();
+	const float PTune = 0.0075;
+	const float ITune = 0.001;
+	const float wallPTune = 0.0025;
+	const float wallITune = 0.0007;
+	struct PID_STRUCT pidStruct;
+	struct PID_STRUCT irPidStruct;
+	int16_t pidGyroReturn;
+	int16_t pidIrReturn;
+	int8_t leftStatus = LEFT_ENCODER;
+	int8_t rightStatus = RIGHT_ENCODER;
+	const int8_t motorSpeed = 65;
+	uint16_t ticksRecoreded = 0;
+	const int16_t maxErrorIR = 1200;
+	//const int16_t closeIR = 3300;
+	int16_t irRight = 0;
+	int16_t irLeft = 0;
+	int16_t irFront = 0;
+	
+	pidStructInit(PTune, ITune, &pidStruct);
+	pidStructInit(wallPTune, wallITune, &irPidStruct);
+	
+	for(;;){
+		
+		irRight = readIR(IR_RIGHT);
+		irLeft = readIR(IR_LEFT);
+		
+		gyroValue = readGyroZ() - gyroOffset;
+		errorIR = irLeft - irRight;//Positive value if it deviates left same as the gyro
+		
+
+
+		
+		pidGyroReturn = pidCalculation(0, gyroValue, &pidStruct);//Will return a negative value if drifting left
+		pidIrReturn = pidCalculation(0, errorIR, &irPidStruct);
+		
+		if(errorIR > maxErrorIR || errorIR < -maxErrorIR){
+			
+			//if(irRight > 3000){
+			//	beep();
+			//	pidIrReturn = pidCalculation(-3300, -irRight, &irPidStruct);
+			//}else if(readIR(IR_LEFT)){
+			
+			//}else{
+			
+			beep();
+			errorIR = 0;
+			pidIrReturn = 0;
+			irPidStruct.sumError = 0;
+			//}
+		}
+		
+		//I2CDebugOut(gyroValue);
+		//I2CDebugOut(pidGyroReturn * -1);
+		
+		
+		if(pidGyroReturn + motorSpeed > motorSpeed * 2){
+			pidGyroReturn = motorSpeed;
+			}else if(pidGyroReturn + motorSpeed < 0){
+			pidGyroReturn = -motorSpeed;
+		}
+		
+		if(center == false){
+			pidIrReturn = 0;
+		}
+		
+		motorSpeedLeft(motorSpeed - pidGyroReturn - pidIrReturn,false);
+		motorSpeedRight(motorSpeed + pidGyroReturn + pidIrReturn,false);
+		
+		
+
+		if(LEFT_ENCODER != leftStatus){//Left ticks see if pin has changed
+			leftStatus = LEFT_ENCODER;//Reused mask
+			ticksRecoreded++;
+		}
+
+		if(RIGHT_ENCODER != rightStatus){//Right ticks see if pin has changed
+			rightStatus = RIGHT_ENCODER;//Reused mask
+			ticksRecoreded++;
+		}
+		
+		if(ticksRecoreded >= ticks){
+			irFront = readIR(IR_FRONT);
+
+			if(irFront > 2800){
+				if(irFront > 4400){
+					motorSpeedBoth(0,0);
+					return;
+
+				}
+			}else{
+
+				motorSpeedBoth(0,0);
+				return;
+
+			}
+
+		}
+		
+		_delay_ms(10);
+	}
+	
+	motorSpeedBoth(0,0);
 }
 
 void leftTurnGyro(){//Preform a left turn using the gyro
@@ -706,12 +896,15 @@ void leftTurnGyro(){//Preform a left turn using the gyro
 		}
 		
 		pidReturn = pidCalculation(3000, gyroValue, &pidStruct);//Will return a negative value if drifing left
-		
+		pidReturn += 20;
+
 		motorSpeedLeft(-pidReturn-3);
 		motorSpeedRight(pidReturn);
 		
 		_delay_ms(10);
 	}
+	
+	motorSpeedBoth(0,0);
 }
 
 void rightTurnGyro(){//Preform a left turn using the gyro
@@ -737,73 +930,207 @@ void rightTurnGyro(){//Preform a left turn using the gyro
 		
 		pidReturn = pidCalculation(-3000, gyroValue, &pidStruct);//Will return a negative value if drifing left
 		
-		motorSpeedLeft(-pidReturn + 3);
-		motorSpeedRight(pidReturn);
+		pidReturn -= 20;
+
+		motorSpeedLeft(-pidReturn);
+		motorSpeedRight(pidReturn - 3);
 		
 		_delay_ms(10);
 	}
+	
+	motorSpeedBoth(0,0);
+}
+
+uint8_t readWalls(uint8_t direction){
+	const uint16_t threashHold = 2500;
+	
+	uint16_t left = readIR(IR_LEFT);
+	uint16_t front = readIR(IR_FRONT);
+	uint16_t right = readIR(IR_RIGHT);	
+	uint8_t walls = 0;
+	
+	switch(direction)
+	{
+		case NORTH:
+		
+			walls |= 0b0001;
+			
+			if(left > threashHold){
+				walls |= 0b1000;
+			}
+			if(front > threashHold){
+				walls |= 0b0100;
+			}
+			if(right > threashHold){
+				walls |= 0b0010;
+			}
+			
+		break;
+		case EAST:
+		
+			walls |= 0b1000;
+			
+			if(left > threashHold){
+				walls |= 0b0100;
+			}
+			if(front > threashHold){
+				walls |= 0b0010;
+			}
+			if(right > threashHold){
+				walls |= 0b0001;
+			}		
+		
+		break;
+		case SOUTH:
+		
+			walls |= 0b0100;
+			
+			if(left > threashHold){
+				walls |= 0b0010;
+			}
+			if(front > threashHold){
+				walls |= 0b0001;
+			}
+			if(right > threashHold){
+				walls |= 0b1000;
+			}	
+				
+		break;
+		case WEST:
+		
+			walls |= 0b0010;
+			
+			if(left > threashHold){
+				walls |= 0b0001;
+			}
+			if(front > threashHold){
+				walls |= 0b1000;
+			}
+			if(right > threashHold){
+				walls |= 0b0100;
+			}
+					
+		break;
+	}
+	
+	return walls;
+}
+
+#define SETTLE_DELAY 200
+
+void straight(){
+	moveStraightGyro(18);
 }
 
 void leftTurn(){
-	uint8_t leftEncode = LEFT_ENCODER;
-	uint8_t rightEncode = RIGHT_ENCODER;
-	
-	uint8_t leftTicks = 0;
-	uint8_t rightTicks = 0;
-	
-	motorSpeedLeft(65,true);
-	motorSpeedRight(67,false);
-	
-	//delayS(2);
-	
-	for(;;){
-		if(leftEncode != LEFT_ENCODER){
-			leftEncode = LEFT_ENCODER;
-			leftTicks++;
-			if(leftTicks == 3){
-				motorSpeedLeft(0,false);	
-			}
-		}
-		
-		if(rightEncode != RIGHT_ENCODER){
-			rightEncode = RIGHT_ENCODER;
-			rightTicks++;
-			if(rightTicks == 2){
-				motorSpeedRight(0,false);
-			}
-		}
-		
-		if(leftTicks == 3 && rightTicks == 2){
-			motorSpeedBoth(0,0);
-			return;
-		}
-		
-		_delay_ms(10);
-	}
+	leftTurnGyro();
 }
 
 void rightTurn(){
-	
+	rightTurnGyro();
 }
 
 void turn180(){
-	
+	leftTurnGyro();
+	_delay_ms(SETTLE_DELAY);
+	leftTurnGyro();
 }
 
 void north(uint8_t heading){
 	
+	switch(heading)
+	{
+		case NORTH:
+			straight();
+		break;
+		case EAST:
+			leftTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case SOUTH:
+			turn180();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case WEST:
+			rightTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;	
+	}
 }
 
 void east(uint8_t heading){
-	
+	switch(heading)
+	{
+		case NORTH:
+			rightTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case EAST:
+			straight();
+		break;
+		case SOUTH:
+			leftTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case WEST:
+			turn180();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+	}	
 }
 
 void south(uint8_t heading){
-	
+	switch(heading)
+	{
+		case NORTH:
+			turn180();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case EAST:
+			rightTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case SOUTH:
+			straight();
+		break;
+		case WEST:
+			leftTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+	}	
 }
 
 void west(uint8_t heading){
-	
+	switch(heading)
+	{
+		case NORTH:
+			leftTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case EAST:
+			turn180();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case SOUTH:
+			rightTurn();
+			_delay_ms(SETTLE_DELAY);
+			straight();
+		break;
+		case WEST:
+			straight();
+		break;
+	}	
 }
 
 

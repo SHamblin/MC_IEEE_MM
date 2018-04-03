@@ -3,7 +3,7 @@
 #define F_CPU 8000000UL
 #include <avr/io.h>
 #include <util/delay.h>
-//#include <avr/interrupt.h>
+#include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <stdio.h>
 #include <math.h>
@@ -72,6 +72,7 @@ void IRsensorSelect(uint8_t number);//Function to select the sensor on the I2C b
 void setupIR();//This function configures the IR sensors. It sets up all 3 connected sensors.
 uint16_t readIR(uint8_t sensor);//Reads from a single selected IR sensor
 int16_t readGyroZ();//Reads the Z axis of the gyro
+float readMagHeading();//Reads the magnetometer heading
 
 void beep();//Simple short beep
 void lowBatt();//low battery warning. This is needed since a lipo is damged if it gets bellow 3V per cell
@@ -91,9 +92,11 @@ void motorBrake(bool Left, bool Right);//Function to brake each motor
 void backAlign();
 void moveStraight(int16_t ticks);//Uses ir distance sensors for movement and encoders for distance. This function will move the robot forward in ticks or CM, not sure which yet
 void moveStraightGyro();//Move forward using the gyro to keep the bot straight
-void moveStraightGyro(uint16_t ticks);//Move forward using the gyro to keep the bot straight and travel a specified ticks
+void moveStraightGyro(uint16_t ticks, bool center = true);//Move forward using the gyro to keep the bot straight and travel a specified ticks
 void leftTurnGyro();
 void rightTurnGyro();
+
+uint8_t readWalls(uint8_t direction);
 
 //Purely for gird based movements
 void straight();//Moves One Square
