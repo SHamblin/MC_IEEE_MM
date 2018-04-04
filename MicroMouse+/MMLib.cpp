@@ -108,7 +108,8 @@ void setUpInital(){//Initial basic set up of IO registers
 	PORTC = 0;//Makes sure all other parts of PORTC are initalised
 	PORTC |= 0b00001111;//Enables pull up for the two buttons and helps assist the pull ups on the encoders
 	
-	TWAR = 42;//Sets address when acting as a slave
+	TWAR = 0x42;//Sets address when acting as a slave
+	TWCR = (1<<TWEA)|(1<<TWEN);//Enable slave mode again
 }
 
 void setUpADC(){;//Sets up ADC for use by battery alarm
@@ -746,8 +747,10 @@ void moveStraightGyro(uint16_t ticks, bool center){//Move forward using the gyro
 			irFront = readIR(IR_FRONT);
 
 			if(irFront > 2800){
-				if(irFront > 4400){
+				if(irFront > 3800){
+					
 					motorSpeedBoth(0,0);
+					beep();
 					return;
 
 				}
@@ -1016,10 +1019,10 @@ uint8_t readWalls(uint8_t direction){
 	return walls;
 }
 
-#define SETTLE_DELAY 200
+#define SETTLE_DELAY 500
 
 void straight(){
-	moveStraightGyro(18);
+	moveStraightGyro(14);
 }
 
 void leftTurn(){
@@ -1036,101 +1039,126 @@ void turn180(){
 	leftTurnGyro();
 }
 
-void north(uint8_t heading){
+void north(uint8_t* heading){
 	
-	switch(heading)
+	switch(*heading)
 	{
 		case NORTH:
+			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case EAST:
+			_delay_ms(SETTLE_DELAY);
 			leftTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case SOUTH:
+			_delay_ms(SETTLE_DELAY);		
 			turn180();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case WEST:
+			_delay_ms(SETTLE_DELAY);		
 			rightTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;	
 	}
+	
+	*heading = NORTH;
+	return;
 }
 
-void east(uint8_t heading){
-	switch(heading)
+void east(uint8_t* heading){
+	switch(*heading)
 	{
 		case NORTH:
+			_delay_ms(SETTLE_DELAY);
 			rightTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case EAST:
+			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case SOUTH:
+			_delay_ms(SETTLE_DELAY);		
 			leftTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case WEST:
+			_delay_ms(SETTLE_DELAY);		
 			turn180();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 	}	
+	*heading = EAST;
+	return;
 }
 
-void south(uint8_t heading){
-	switch(heading)
+void south(uint8_t* heading){
+	switch(*heading)
 	{
 		case NORTH:
+			_delay_ms(SETTLE_DELAY);		
 			turn180();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case EAST:
+			_delay_ms(SETTLE_DELAY);		
 			rightTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case SOUTH:
+			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case WEST:
+			_delay_ms(SETTLE_DELAY);		
 			leftTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
-	}	
+	}
+	*heading = SOUTH;
+	return;	
 }
 
-void west(uint8_t heading){
-	switch(heading)
+void west(uint8_t* heading){
+	switch(*heading)
 	{
 		case NORTH:
+			_delay_ms(SETTLE_DELAY);		
 			leftTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case EAST:
+			_delay_ms(SETTLE_DELAY);		
 			turn180();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
 		case SOUTH:
+			_delay_ms(SETTLE_DELAY);		
 			rightTurn();
 			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
-		case WEST:
+		case WEST:	
+			_delay_ms(SETTLE_DELAY);
 			straight();
 		break;
-	}	
+	}
+	*heading = WEST;
+	return;	
 }
 
 

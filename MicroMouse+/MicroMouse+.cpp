@@ -7,21 +7,26 @@ volatile uint8_t command = 0;
 volatile bool ready = false;
 
 ISR(TWI_vect){//Interupt routine for I2C slave mode
-	
+	beep();
+	beep();
+	beep();
 }
 
 int main()
 {
 	setUpInital();
-	setUpADC();
-	setUpIMU();
-	setupIR();
+	//setUpADC();
+	//setUpIMU();
+	//setupIR();
 	I2C_MODE_FAST
 	sei();//Enable interupts, this is for I2C slave mode
 	//beep();
 	//motorSpeedBoth(60,60);
 	//motorSpeed(100,100);
-	//for(;;){_delay_ms(10);}
+	for(;;){
+		beep();
+		_delay_ms(2000);
+	}
 	int presses = 0;
 	while( presses < 4 ){//This block keeps the code from running until a button is pressed
 		_delay_ms(10);
@@ -37,9 +42,11 @@ int main()
 		_delay_ms(50); 
 	}
 	
+	for(;;){_delay_ms(10);}
+			
 	beep();
 	
-	lowBatt();
+	//lowBatt();
 	_delay_ms(2000);
 	//leftTurnGyro();
 	_delay_ms(2000);
@@ -56,13 +63,44 @@ int main()
 	//rightTurnGyro();
 	//beep();
 	//moveStraightGyro(75 + 4);
+	
+	direction = SOUTH;
+	
+	south(&direction);
+	south(&direction);
+	south(&direction);
+	south(&direction);
+	south(&direction);
+	east(&direction);					
+	
+	north(&direction);
+	north(&direction);
+	north(&direction);
+	north(&direction);
+	
+	east(&direction);
+	east(&direction);
+	
+	south(&direction);
+	south(&direction);
+	
+	east(&direction);
+	south(&direction);
+	west(&direction);
+	south(&direction);
+	east(&direction);
+	east(&direction);	
+	
+	for(;;){
+		_delay_ms(10);
+	}
 	moveStraightGyro(14);
 	_delay_ms(500);
 	moveStraightGyro(14);
 	_delay_ms(500);
 	moveStraightGyro(14);
 	_delay_ms(500);
-	moveStraightGyro(14);
+	moveStraightGyro(13);
 	_delay_ms(500);
 	rightTurnGyro();
 	_delay_ms(500);
@@ -76,8 +114,8 @@ int main()
 	_delay_ms(500);
 	moveStraightGyro(14);
 
-	leftTurnGyro();
 	_delay_ms(500);
+	leftTurnGyro();
 	_delay_ms(500);
 	moveStraightGyro(14);
 	_delay_ms(500);
@@ -144,19 +182,19 @@ int main()
 		
 		switch(command){
 			case NORTH:
-				north(direction);
+				north(&direction);
 				direction = NORTH;
 			break;
 			case EAST:
-				east(direction);
+				east(&direction);
 				direction = EAST;
 			break;
 			case SOUTH:
-				south(direction);
+				south(&direction);
 				direction = SOUTH;
 			break;
 			case WEST:
-				west(direction);
+				west(&direction);
 				direction = WEST;
 			break;
 		}

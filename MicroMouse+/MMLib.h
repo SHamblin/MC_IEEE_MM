@@ -105,10 +105,10 @@ void rightTurn();
 void turn180();
 
 //These are the direct commands the controler (Pi Zero) will send
-void north(uint8_t heading);
-void east(uint8_t heading);
-void south(uint8_t heading);
-void west(uint8_t heading);
+void north(uint8_t* heading);
+void east(uint8_t* heading);
+void south(uint8_t* heading);
+void west(uint8_t* heading);
 
 //Depreciated Code-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 //void motorTicks(int leftTick,int8_t speed);
