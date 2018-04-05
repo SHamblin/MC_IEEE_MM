@@ -38,8 +38,9 @@ void I2CStop(){//Stops and finishes I2C transmission
 	
 	_delay_us(4);
 	
-	TWCR = 0;//Clear TWCR tp set up I2C Slave
-	TWCR = (1<<TWEA)|(1<<TWEN);//Enable slave mode again
+	//TWCR = 0;//Clear TWCR tp set up I2C Slave
+	//TWCR = (1<<TWEA)|(1<<TWEN);//Enable slave mode again
+	TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|(0<<TWWC);
 	
 }
 
@@ -109,7 +110,8 @@ void setUpInital(){//Initial basic set up of IO registers
 	PORTC |= 0b00001111;//Enables pull up for the two buttons and helps assist the pull ups on the encoders
 	
 	TWAR = 0x42;//Sets address when acting as a slave
-	TWCR = (1<<TWEA)|(1<<TWEN);//Enable slave mode again
+	//TWCR = (1<<TWEA)|(1<<TWEN);//Enable slave mode again
+	TWCR = (1<<TWEN)|(1<<TWIE)|(1<<TWINT)|(1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|(0<<TWWC);
 }
 
 void setUpADC(){;//Sets up ADC for use by battery alarm
