@@ -97,6 +97,7 @@ void leftTurnGyro();
 void rightTurnGyro();
 
 uint8_t readWalls(uint8_t direction);
+uint8_t readWalls2(uint8_t direction);//Walls read function to ignor direction
 
 //Purely for gird based movements
 void straight();//Moves One Square

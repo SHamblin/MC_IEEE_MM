@@ -665,7 +665,6 @@ void moveStraightGyro(){//Move forward using the gyro to keep the bot straight
 
 void moveStraightGyro(uint16_t ticks, bool center){//Move forward using the gyro to keep the bot straight and travel a specified ticks
 	int16_t gyroValue = 0;
-	int16_t errorIR = 0;
 	const int16_t gyroOffset = readGyroZ();
 	const float PTune = 0.0075;
 	const float ITune = 0.001;
@@ -679,8 +678,6 @@ void moveStraightGyro(uint16_t ticks, bool center){//Move forward using the gyro
 	int8_t rightStatus = RIGHT_ENCODER;
 	const int8_t motorSpeed = 65;
 	uint16_t ticksRecoreded = 0;
-	const int16_t maxErrorIR = 1200;
-	//const int16_t closeIR = 3300;
 	int16_t irRight = 0;
 	int16_t irLeft = 0;
 	int16_t irFront = 0;
@@ -688,7 +685,7 @@ void moveStraightGyro(uint16_t ticks, bool center){//Move forward using the gyro
 	pidStructInit(PTune, ITune, &pidStruct);
 	pidStructInit(wallPTune, wallITune, &irPidStruct);
 	
-	const uint16_t magic = 3200;
+	const int16_t magic = 3200;
 
 	for(;;){
 		
@@ -1021,6 +1018,50 @@ uint8_t readWalls(uint8_t direction){
 	return walls;
 }
 
+uint8_t readWalls2(uint8_t direction){
+	const uint16_t threashHold = 3000;
+	
+	uint16_t left = readIR(IR_LEFT);
+	uint16_t front = readIR(IR_FRONT);
+	uint16_t right = readIR(IR_RIGHT);
+	uint8_t walls = 0;
+	
+	if(left > threashHold){
+		walls ++;
+	}
+	walls = walls << 1;
+	
+	if(front > threashHold){
+		walls++;
+	}
+	walls = walls << 1;
+	
+	if(right > threashHold){
+		walls++;
+	}
+	
+	
+	switch (direction){
+		case NORTH:
+			direction = 1;
+			break;
+		case EAST:
+			direction = 2;
+			break;
+		case SOUTH:
+			direction = 3;
+			break;
+		case WEST:
+			direction = 0;
+			break;		
+	}
+	
+	direction += direction << 4;
+	
+	walls += direction;
+	
+	return walls;
+}
 #define SETTLE_DELAY 500
 
 void straight(){

@@ -9,7 +9,10 @@ volatile bool I2CDataReady = false;
 volatile uint8_t timesPinged = 0;
 #define BOMB 42
 
+#define TWI_STX_ADR_ACK 0xA8  // Own SLA+R has been received; ACK has been returned
 #define TWI_SRX_ADR_DATA_ACK 0x80 //Addressed with SLA+W, ack returned
+#define TWI_STX_DATA_ACK 0xB8  // Data byte in TWDR has been transmitted; ACK has been received
+#define TWI_STX_DATA_NACK          0xC0  // Data byte in TWDR has been transmitted; NOT ACK has been received
 
 volatile bool left = false;
 volatile bool fwrd = false;
@@ -21,34 +24,45 @@ volatile bool bombBeep = false;
 
 ISR(TWI_vect){//Interupt routine for I2C slave mode
 
-
-	if(TWSR = 0x80){
+	if(TWSR == TWI_STX_ADR_ACK || TWSR == TWI_STX_DATA_ACK){
+		TWDR = walls;
+		TWCR = (1<<TWEN)|                              // Enable TWI-interface and release TWI pins
+			(1<<TWIE)|(1<<TWINT)|                      // Keep interrupt enabled and clear the flag
+			(1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|           // Answer on next address match
+			(0<<TWWC);
+		
+	}else if(TWSR == TWI_STX_DATA_NACK){
+		TWDR = walls;
+		
+		TWCR = (1<<TWEN)|                                 // Enable TWI-interface and release TWI pins
+             (1<<TWIE)|(1<<TWINT)|                      // Keep interrupt enabled and clear the flag
+             (1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|           // Answer on next address match
+             (0<<TWWC);                                 //			
+	}else if(TWSR == TWI_SRX_ADR_DATA_ACK){
 			
-			command = TWDR;
+		command = TWDR;
 			
-			TWCR = (1<<TWEN)|                                 // TWI Interface enabled
+		TWCR = (1<<TWEN)|                                 // TWI Interface enabled
 			(1<<TWIE)|(1<<TWINT)|                      // Enable TWI Interupt and clear the flag to send byte
 			(1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|           // Send ACK after next reception
 			(0<<TWWC);
 			
-			ready = false;//Command received, not ready untill command finished
-			if(command == 1){
-				left = true;
-			}else if(command == 2){
-				fwrd = true;
-			}else if(command == 3){
-				right = true;
-			}else if(command == 4){
-				reverse = true;	
-			}else if(command == 9){
-				beep1 = true;
-			}else if(command == 10){
-				beep2 = true;
-			}else if(command == 42){
-				bombBeep = true;
-			}
-			
-			//beep();
+		ready = false;//Command received, not ready untill command finished
+		if(command == 1){
+			left = true;
+		}else if(command == 2){
+			fwrd = true;
+		}else if(command == 3){
+			right = true;
+		}else if(command == 4){
+			reverse = true;	
+		}else if(command == 9){
+			beep1 = true;
+		}else if(command == 10){
+			beep2 = true;
+		}else if(command == 42){
+			bombBeep = true;
+		}
 	}
 }
 
@@ -60,7 +74,6 @@ uint8_t status;
 int main()
 {
 	setUpInital();
-	//goto skip;
 	setUpADC();
 	setUpIMU();
 	setupIR();
@@ -70,7 +83,7 @@ int main()
 	ready = false;
 
 	for(;;){
-		walls = readWalls(direction);
+		walls = readWalls2(direction);
 		ready = true;
 		
 		while(ready){
