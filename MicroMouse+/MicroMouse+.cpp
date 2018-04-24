@@ -18,6 +18,10 @@ volatile bool left = false;
 volatile bool fwrd = false;
 volatile bool right = false;
 volatile bool reverse = false;
+volatile bool moveNorth = false;
+volatile bool moveEast = false;
+volatile bool moveSouth = false;
+volatile bool moveWest = false;
 volatile bool beep1 = false;
 volatile bool beep2 = false;
 volatile bool bombBeep = false;
@@ -38,7 +42,7 @@ ISR(TWI_vect){//Interupt routine for I2C slave mode
              (1<<TWIE)|(1<<TWINT)|                      // Keep interrupt enabled and clear the flag
              (1<<TWEA)|(0<<TWSTA)|(0<<TWSTO)|           // Answer on next address match
              (0<<TWWC);                                 //			
-	}else if(TWSR == TWI_SRX_ADR_DATA_ACK){
+	}else {//if(TWSR == TWI_SRX_ADR_DATA_ACK){
 			
 		command = TWDR;
 			
@@ -56,6 +60,14 @@ ISR(TWI_vect){//Interupt routine for I2C slave mode
 			right = true;
 		}else if(command == 4){
 			reverse = true;	
+		}else if(command == 5){
+			moveNorth = true;
+		}else if(command == 6){
+			moveEast = true;
+		}else if(command == 7){
+			moveSouth = true;
+		}else if(command == 8){
+			moveWest = true;
 		}else if(command == 9){
 			beep1 = true;
 		}else if(command == 10){
@@ -78,6 +90,7 @@ int main()
 	setUpIMU();
 	setupIR();
 	I2C_MODE_FAST
+	//lowBatt();
 	sei();//Enable interupts, this is for I2C slave mode
 
 	ready = false;
@@ -85,11 +98,12 @@ int main()
 	for(;;){
 		walls = readWalls2(direction);
 		ready = true;
-		
+		PORTD |= 0b00000100;//Sets ready
 		while(ready){
 			_delay_ms(10);
+			//walls = readWalls2(direction);
 		}
-	
+		PORTD &= 0b11111011;//Sets not ready line
 		if(left){
 			_delay_ms(200);
 			leftTurnGyro();
@@ -119,6 +133,18 @@ int main()
 			
 			if(direction > 3)direction = direction - 4;
 			 
+		}else if(moveNorth){
+			_delay_ms(200);
+			north(&direction);
+		}else if(moveEast){
+			_delay_ms(200);
+			east(&direction);
+		}else if(moveSouth){
+			_delay_ms(200);
+			south(&direction);
+		}else if(moveWest){
+			_delay_ms(200);
+			west(&direction);
 		}else if(beep1){
 			beep();
 		}else if(beep2){
@@ -164,6 +190,10 @@ int main()
 		fwrd = false;
 		right = false;
 		reverse = false;
+		moveNorth = false;
+		moveEast = false;
+		moveSouth = false;
+		moveWest = false;
 		beep1 = false;
 		beep2 = false;
 		bombBeep = false;

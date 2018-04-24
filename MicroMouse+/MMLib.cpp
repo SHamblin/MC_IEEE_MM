@@ -105,6 +105,9 @@ void setUpInital(){//Initial basic set up of IO registers
 	_delay_ms(10);//Gives time for every thing to stabalise, might not be needed
 	
 	I2C_MODE_FAST
+	DDRD  |= 0b00000100;//Sets PD2 as output
+	PORTD &= 0b11111011;//Makes sure PD2 is low so not ready
+	
 	DDRC &=  0b11110000;//Makes sure that the buttons and encoders are inputs
 	PORTC = 0;//Makes sure all other parts of PORTC are initalised
 	PORTC |= 0b00001111;//Enables pull up for the two buttons and helps assist the pull ups on the encoders
@@ -783,6 +786,7 @@ void moveStraightGyroOld(uint16_t ticks, bool center){//Move forward using the g
 	int8_t leftStatus = LEFT_ENCODER;
 	int8_t rightStatus = RIGHT_ENCODER;
 	const int8_t motorSpeed = 65;
+	int8_t adjustedMotorSpeed = motorSpeed;
 	uint16_t ticksRecoreded = 0;
 	const int16_t maxErrorIR = 1200;
 	//const int16_t closeIR = 3300;
@@ -837,21 +841,6 @@ void moveStraightGyroOld(uint16_t ticks, bool center){//Move forward using the g
 			pidIrReturn = 0;
 		}
 		
-		motorSpeedLeft(motorSpeed - pidGyroReturn - pidIrReturn,false);
-		motorSpeedRight(motorSpeed + pidGyroReturn + pidIrReturn,false);
-		
-		
-
-		if(LEFT_ENCODER != leftStatus){//Left ticks see if pin has changed
-			leftStatus = LEFT_ENCODER;//Reused mask
-			ticksRecoreded++;
-		}
-
-		if(RIGHT_ENCODER != rightStatus){//Right ticks see if pin has changed
-			rightStatus = RIGHT_ENCODER;//Reused mask
-			ticksRecoreded++;
-		}
-		
 		if(ticksRecoreded >= ticks){
 			irFront = readIR(IR_FRONT);
 
@@ -865,10 +854,28 @@ void moveStraightGyroOld(uint16_t ticks, bool center){//Move forward using the g
 
 				motorSpeedBoth(0,0);
 				return;
-
 			}
-
+		}else if(ticksRecoreded >= ticks - 3){
+				adjustedMotorSpeed = motorSpeed - 20;
 		}
+					
+		
+		motorSpeedLeft(adjustedMotorSpeed - pidGyroReturn - pidIrReturn,false);
+		motorSpeedRight(adjustedMotorSpeed + pidGyroReturn + pidIrReturn,false);
+		
+		
+
+		if(LEFT_ENCODER != leftStatus){//Left ticks see if pin has changed
+			leftStatus = LEFT_ENCODER;//Reused mask
+			ticksRecoreded++;
+		}
+
+		if(RIGHT_ENCODER != rightStatus){//Right ticks see if pin has changed
+			rightStatus = RIGHT_ENCODER;//Reused mask
+			ticksRecoreded++;
+		}
+		
+
 		
 		_delay_ms(10);
 	}
@@ -1019,7 +1026,7 @@ uint8_t readWalls(uint8_t direction){
 }
 
 uint8_t readWalls2(uint8_t direction){
-	const uint16_t threashHold = 3000;
+	const uint16_t threashHold = 2800;
 	
 	uint16_t left = readIR(IR_LEFT);
 	uint16_t front = readIR(IR_FRONT);
@@ -1056,7 +1063,7 @@ uint8_t readWalls2(uint8_t direction){
 			break;		
 	}
 	
-	direction += direction << 4;
+	direction = direction << 4;
 	
 	walls += direction;
 	
